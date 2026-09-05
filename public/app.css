@@ -744,6 +744,31 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 .eq-glow { fill: none; stroke-width: 7; opacity: 0.16; stroke-linejoin: round; stroke-linecap: round; }
 .eq-line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 
+.eq-legend {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.eq-legend-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: var(--text-3);
+}
+
+.eq-legend b { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.eq-legend b.up { color: var(--green); }
+.eq-legend b.down { color: var(--red); }
+.eq-legend-dim { font-size: 9px; color: var(--text-4); }
+
 .eq-plot {
   position: absolute;
   top: 0; left: 0; bottom: 24px;

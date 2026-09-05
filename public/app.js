@@ -927,7 +927,24 @@ function buildPortfolioData() {
     points.push({ t: e.t, v: bal });
     ledger.unshift({ ...e, balAfter: bal });
   }
-  return { balance: B, initial: events.length ? B - sumNet : B, points, ledger };
+
+  // Cumulative realized PnL curve — starts at exactly 0 SOL, one point
+  // per closed trade, chronological. This is the honest growth curve
+  // (no balance-reconstruction artifacts).
+  const closedSorted = state.closedPositions
+    .filter(c => parseTs(c.closed_at))
+    .sort((a, b) => parseTs(a.closed_at) - parseTs(b.closed_at));
+  const pnlSeries = [];
+  if (closedSorted.length) {
+    pnlSeries.push({ t: parseTs(closedSorted[0].created_at) || parseTs(closedSorted[0].closed_at), v: 0 });
+    let cum = 0;
+    for (const c of closedSorted) {
+      cum += netOf(c);
+      pnlSeries.push({ t: parseTs(c.closed_at), v: cum, sym: c.symbol, trade: netOf(c) });
+    }
+  }
+
+  return { balance: B, initial: events.length ? B - sumNet : B, points, ledger, pnlSeries };
 }
 
 function niceTicks(min, max, count = 4) {
@@ -958,22 +975,20 @@ function fmtAxisTime(ts) {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}:${mm}`;
 }
 
-/* Interactive equity chart: Y-axis ruler, time axis, initial-capital
-   baseline, hover crosshair + tooltip. Line lives in a stretched SVG,
-   all text/markers are HTML overlays so nothing distorts. */
-function mountEquityChart(host, points, initial) {
+/* Interactive equity chart: Y-axis ruler, time axis, hover crosshair +
+   tooltip. Line lives in a stretched SVG, all text/markers are HTML
+   overlays so nothing distorts. Domain always includes 0 SOL. */
+function mountEquityChart(host, points) {
   if (!host) return;
   if (points.length < 2) {
-    host.innerHTML = '<div class="eq-empty">KURVA SALDO MUNCUL SETELAH TRADE PERTAMA</div>';
+    host.innerHTML = '<div class="eq-empty">KURVA PROFIT MUNCUL SETELAH TRADE PERTAMA DITUTUP</div>';
     return;
   }
 
   const vs = points.map(p => p.v);
-  const hasBase = initial > 0;
-  let min = Math.min(...vs);
-  let max = Math.max(...vs);
-  if (hasBase) { min = Math.min(min, initial); max = Math.max(max, initial); }
-  const pad = (max - min) * 0.08 || Math.abs(max) * 0.02 || 0.001;
+  let min = Math.min(0, ...vs);           // curve is anchored to 0 SOL
+  let max = Math.max(0, ...vs);
+  const pad = (max - min) * 0.1 || Math.abs(max) * 0.05 || 0.001;
   min -= pad; max += pad;
 
   const TOP = 7, BOT = 7;                 // headroom (% of plot height)
@@ -990,17 +1005,20 @@ function mountEquityChart(host, points, initial) {
   const pts = points.map((p, i) => `${px(i).toFixed(1)},${py(p.v).toFixed(1)}`);
   const line = `M${pts.join('L')}`;
   const area = `${line}L1000,1000L0,1000Z`;
-  const up = vs[n - 1] >= vs[0];
+  const up = vs[n - 1] >= 0;
   const color = up ? '#2fd77b' : '#ff5470';
-  const showBase = hasBase && initial >= min && initial <= max;
 
   // x labels: 5 evenly spaced indices
   const idxs = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * (n - 1)));
 
   host.innerHTML = `
+    <div class="eq-legend">
+      <span class="eq-legend-name">PNL KUMULATIF</span>
+      <b class="${up ? 'up' : 'down'}">${vs[n - 1] >= 0 ? '+' : ''}${vs[n - 1].toFixed(4)} SOL</b>
+      <span class="eq-legend-dim">· mulai dari 0 SOL · ${n - 1} trade tertutup</span>
+    </div>
     <svg class="eq-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
       ${ticks.map(v => `<line class="eq-grid" vector-effect="non-scaling-stroke" x1="0" x2="1000" y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}"/>`).join('')}
-      ${showBase ? `<line class="eq-base" vector-effect="non-scaling-stroke" x1="0" x2="1000" y1="${py(initial).toFixed(1)}" y2="${py(initial).toFixed(1)}"/>` : ''}
       <defs><linearGradient id="pfGrad" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="${color}" stop-opacity="0.32"/>
         <stop offset="1" stop-color="${color}" stop-opacity="0"/>
@@ -1015,8 +1033,7 @@ function mountEquityChart(host, points, initial) {
       <div class="eq-last" style="left:${xPct(n - 1)}%;top:${yPct(vs[n - 1])}%"></div>
     </div>
     <div class="eq-yaxis">
-      ${ticks.map(v => `<span style="top:${yPct(v)}%">${v.toFixed(dec)}</span>`).join('')}
-      ${showBase ? `<i class="eq-base-tag" style="top:${yPct(initial)}%">MODAL ${initial.toFixed(dec)}</i>` : ''}
+      ${ticks.map(v => `<span style="top:${yPct(v)}%">${v >= 0 ? '+' : ''}${v.toFixed(dec)}</span>`).join('')}
     </div>
     <div class="eq-xaxis">${idxs.map(i => `<span>${fmtAxisTime(points[i].t)}</span>`).join('')}</div>
     <div class="eq-tip" hidden></div>`;
@@ -1041,8 +1058,12 @@ function mountEquityChart(host, points, initial) {
     const px2 = Math.min(rect.width, Math.max(0, fx * rect.width));
     tip.style.left = Math.min(rect.width - 74, Math.max(74, px2)) + 'px';
     tip.style.top = `calc(${yPct(p.v)}% - 12px)`;
-    tip.innerHTML = `<b style="color:${color}">${p.v.toFixed(4)} SOL</b>
-      <span>${fmtAxisTime(p.t)}${i > 0 ? ` · <i style="font-style:normal;color:${d >= 0 ? 'var(--green)' : 'var(--red)'}">${d >= 0 ? '+' : ''}${d.toFixed(4)}</i>` : ''}</span>`;
+    const pnlTxt = `${p.v >= 0 ? '+' : ''}${p.v.toFixed(4)} SOL`;
+    tip.innerHTML = p.sym
+      ? `<b style="color:${color}">$${esc(p.sym)} ${pnlTxt}</b>
+         <span>${fmtAxisTime(p.t)} · trade <i style="font-style:normal;color:${(p.trade || 0) >= 0 ? 'var(--green)' : 'var(--red)'}">${(p.trade || 0) >= 0 ? '+' : ''}${(p.trade || 0).toFixed(4)}</i></span>`
+      : `<b style="color:${color}">${pnlTxt}</b>
+         <span>${fmtAxisTime(p.t)} · titik awal</span>`;
   };
   const leave = () => { cross.hidden = true; dot.hidden = true; tip.hidden = true; };
   svg.addEventListener('mousemove', move);
@@ -1081,7 +1102,7 @@ function renderPortfolio(force) {
     </div>
     <div class="pf-chart">
       <div class="eqchart" id="eqChart"></div>
-      <div class="pf-chart-labels"><span>pergerakan saldo · arahkan kursor ke chart untuk detail</span><span>${data.points.length} titik</span></div>
+      <div class="pf-chart-labels"><span>kurva profit (PnL kumulatif) · arahkan kursor untuk detail tiap trade</span><span>${data.pnlSeries.length} titik</span></div>
     </div>
     <div class="pf-stats">
       <div class="pf-stat"><div class="v">${closed.length + open.length}</div><div class="k">Total Transaksi</div></div>
@@ -1119,7 +1140,7 @@ function renderPortfolio(force) {
       }).join('')}
     </div>`;
 
-  mountEquityChart(document.getElementById('eqChart'), data.points, data.initial);
+  mountEquityChart(document.getElementById('eqChart'), data.pnlSeries);
 }
 
 /* ---------------- Wallet ---------------- */
