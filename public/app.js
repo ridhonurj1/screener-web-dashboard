@@ -1307,7 +1307,13 @@ function mountEquityChart(host, points) {
   const TOP = 7, BOT = 7;                 // headroom (% of plot height)
   const n = points.length;
   const yPct = v => TOP + (1 - (v - min) / (max - min)) * (100 - TOP - BOT);
-  const xPct = i => (i / (n - 1)) * 100;
+  // Sumbu X berskala waktu sebenarnya: posisi titik proporsional terhadap
+  // jam kejadian (dulu per-indeks trade — jeda 2 jam dan jeda 2 hari
+  // digambar sama lebar, membuat sumbu waktu menyesatkan).
+  const t0 = points[0].t;
+  const tSpan = (points[n - 1].t - t0) || 1;
+  const xPctT = t => ((t - t0) / tSpan) * 100;
+  const xPct = i => xPctT(points[i].t);
 
   const { ticks, step } = niceTicks(min, max, 4);
   const dec = tickDecimals(step);
@@ -1321,8 +1327,8 @@ function mountEquityChart(host, points) {
   const up = vs[n - 1] >= 0;
   const color = up ? '#2fd77b' : '#ff5470';
 
-  // x labels: 5 evenly spaced indices
-  const idxs = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * (n - 1)));
+  // x labels: 5 label waktu berjarak sama pada rentang waktu nyata
+  const axisTimes = [0, 0.25, 0.5, 0.75, 1].map(f => t0 + f * tSpan);
 
   host.innerHTML = `
     <div class="eq-legend">
@@ -1348,7 +1354,7 @@ function mountEquityChart(host, points) {
     <div class="eq-yaxis">
       ${ticks.map(v => `<span style="top:${yPct(v)}%">${v >= 0 ? '+' : ''}${v.toFixed(dec)}</span>`).join('')}
     </div>
-    <div class="eq-xaxis">${idxs.map(i => `<span>${fmtAxisTime(points[i].t)}</span>`).join('')}</div>
+    <div class="eq-xaxis">${axisTimes.map(t => `<span>${fmtAxisTime(t)}</span>`).join('')}</div>
     <div class="eq-tip" hidden></div>`;
 
   // hover crosshair + tooltip
@@ -1360,7 +1366,13 @@ function mountEquityChart(host, points) {
   const move = e => {
     const rect = svg.getBoundingClientRect();
     const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    const i = Math.min(n - 1, Math.max(0, Math.round(fx * (n - 1))));
+    // Skala waktu: posisi mouse -> waktu -> vertex terdekat berdasarkan waktu
+    const tMouse = t0 + fx * tSpan;
+    let i = 0, bestD = Infinity;
+    for (let k = 0; k < n; k++) {
+      const dAbs = Math.abs(points[k].t - tMouse);
+      if (dAbs < bestD) { bestD = dAbs; i = k; }
+    }
     const p = points[i];
     const prev = points[Math.max(0, i - 1)];
     const d = p.v - prev.v;
