@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="output">Testing...</div>
+  <script>
+    fetch('/api/signals')
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('output').innerText = "SIGNALS LOADED: " + d.count + " | First: " + d.data[0].symbol;
+      })
+      .catch(e => {
+        document.getElementById('output').innerText = "ERROR: " + e.message;
+      });
+  </script>
+</body>
+</html>
