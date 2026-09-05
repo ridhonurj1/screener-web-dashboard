@@ -105,6 +105,54 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// jsq: escape nilai untuk string JS di dalam atribut HTML (onclick="...'${jsq(v)}'...").
+// esc() SAJA TIDAK CUKUP: parser HTML mendekode &#39; kembali menjadi ' SEBELUM
+// JS dieksekusi, jadi symbol/token_ca dari metadata token (attacker-controlled
+// di Solana) bisa keluar dari string dan mengeksekusi kode. ' di-escape sebagai
+// \' sehingga setelah dekode HTML tetap ter-escape di JS.
+function jsq(s) {
+  return String(s ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ---------------- Auth (shared-secret token) ---------------- */
+const AUTH_KEY = 'screener_auth_token';
+(function bootstrapAuth() {
+  const q = new URLSearchParams(location.search).get('auth');
+  if (q) {
+    try { localStorage.setItem(AUTH_KEY, q); } catch (e) { /* private mode */ }
+    history.replaceState(null, '', location.pathname); // buang token dari URL
+  }
+})();
+function authQuery() {
+  let t = '';
+  try { t = localStorage.getItem(AUTH_KEY) || ''; } catch (e) { /* noop */ }
+  return t ? `auth=${encodeURIComponent(t)}` : '';
+}
+// Suntikkan Authorization header ke SEMUA fetch /api/* yang sudah ada
+// (monkey-patch minim alih-alih mengubah puluhan call site).
+(function patchFetch() {
+  const _orig = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    try {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.startsWith('/api/')) {
+        let t = '';
+        try { t = localStorage.getItem(AUTH_KEY) || ''; } catch (e) { /* noop */ }
+        if (t) {
+          init = Object.assign({}, init);
+          const h = init.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : Object.assign({}, init.headers);
+          h['Authorization'] = 'Bearer ' + t;
+          init.headers = h;
+        }
+      }
+    } catch (e) { /* noop */ }
+    return _orig(input, init);
+  };
+})();
+
 const AVATAR_TONES = ['tone-lime', 'tone-cyan', 'tone-blue', 'tone-violet', 'tone-amber'];
 function avatarTone(ca) {
   let h = 0;
@@ -177,11 +225,21 @@ function applyLogos() {
 function socialsHTML(ca) {
   const soc = TOKEN_SOCIALS.get(ca);
   if (!soc) return '';
+  // Whitelist skema: URL sosial dari metadata token (attacker-controlled).
+  // esc() memblok breakout atribut tapi BUKAN skema javascript:.
+  const safeURL = (u) => {
+    const s = String(u || '').trim();
+    return /^https?:\/\//i.test(s) ? esc(s) : '';
+  };
   const links = [];
-  if (soc.twitter) links.push(`<a class="soc-link" href="${esc(soc.twitter)}" target="_blank" rel="noopener" title="X / Twitter" onclick="event.stopPropagation()">${I.x}</a>`);
-  if (soc.telegram) links.push(`<a class="soc-link" href="${esc(soc.telegram)}" target="_blank" rel="noopener" title="Telegram" onclick="event.stopPropagation()">${I.tg}</a>`);
-  if (soc.discord) links.push(`<a class="soc-link" href="${esc(soc.discord)}" target="_blank" rel="noopener" title="Discord" onclick="event.stopPropagation()">${I.discord}</a>`);
-  if (soc.website) links.push(`<a class="soc-link" href="${esc(soc.website)}" target="_blank" rel="noopener" title="Website" onclick="event.stopPropagation()">${I.globe}</a>`);
+  const tw = safeURL(soc.twitter);
+  const tg = safeURL(soc.telegram);
+  const dc = safeURL(soc.discord);
+  const ws = safeURL(soc.website);
+  if (tw) links.push(`<a class="soc-link" href="${tw}" target="_blank" rel="noopener" title="X / Twitter" onclick="event.stopPropagation()">${I.x}</a>`);
+  if (tg) links.push(`<a class="soc-link" href="${tg}" target="_blank" rel="noopener" title="Telegram" onclick="event.stopPropagation()">${I.tg}</a>`);
+  if (dc) links.push(`<a class="soc-link" href="${dc}" target="_blank" rel="noopener" title="Discord" onclick="event.stopPropagation()">${I.discord}</a>`);
+  if (ws) links.push(`<a class="soc-link" href="${ws}" target="_blank" rel="noopener" title="Website" onclick="event.stopPropagation()">${I.globe}</a>`);
   return links.length ? links.join('') : '';
 }
 
@@ -401,7 +459,8 @@ function updateSignalCard(sig) {
 
   // multiplier
   refs.mult.textContent = `${isUp ? '▲' : '▼'} ${mult.toFixed(2)}x`;
-  refs.mult.className = `sig-mult ${mult > 1.001 ? 'mult-up' : mult < 0.999 ? 'mult-down' : 'mult-flat'}`;
+  const multCls = `sig-mult ${mult > 1.001 ? 'mult-up' : mult < 0.999 ? 'mult-down' : 'mult-flat'}`;
+  if (refs.mult.className !== multCls) refs.mult.className = multCls; // jangan reassign tiap tick
 
   // metrics
   refs.mcap.textContent = fmtUSD(sig.current_mcap || sig.entry_mcap);
@@ -419,8 +478,13 @@ function updateSignalCard(sig) {
   // cto badge
   if (refs.cto) refs.cto.style.display = sig.cto ? '' : 'none';
 
-  // sparkline
-  refs.spark.innerHTML = sparklineSVG(sig.ca);
+  // sparkline — throttle redraw ke ~1x/detik per kartu: dulu innerHTML SVG
+  // di-parse ulang tiap 200ms per kartu (ratusan reparse/detik di 40 kartu)
+  const nowMs = Date.now();
+  if (!refs._sparkAt || nowMs - refs._sparkAt > 1000) {
+    refs.spark.innerHTML = sparklineSVG(sig.ca);
+    refs._sparkAt = nowMs;
+  }
 }
 
 function renderSignals() {
@@ -549,7 +613,7 @@ function buildPositionCard(pos) {
       <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
       <div style="display:flex;align-items:center;gap:9px">
         <span class="sig-age" data-ref="age"></span>
-        <button class="btn btn-danger" onclick="event.stopPropagation();openTradeModal({action:'sell', positionId:${pos.id}, symbol:'${esc(pos.symbol)}', tokenCa:'${esc(pos.token_ca)}', tokensRemaining:${parseFloat(pos.tokens_remaining) || 0}, entryPrice:${parseFloat(pos.entry_price_usd) || 0}, currentPrice:${parseFloat(pos.current_price_usd) || 0}, solSpent:${parseFloat(pos.sol_spent) || 0}})">Jual</button>
+        <button class="btn btn-danger" onclick="event.stopPropagation();openTradeModal({action:'sell', positionId:${parseInt(pos.id) || 0}, symbol:'${jsq(pos.symbol)}', tokenCa:'${jsq(pos.token_ca)}', tokensRemaining:${parseFloat(pos.tokens_remaining) || 0}, entryPrice:${parseFloat(pos.entry_price_usd) || 0}, currentPrice:${parseFloat(pos.current_price_usd) || 0}, solSpent:${parseFloat(pos.sol_spent) || 0}})">Jual</button>
       </div>
     </div>`;
 
@@ -607,7 +671,7 @@ function renderHistory() {
     const label = exit.includes('TP') ? 'TAKE PROFIT' : exit.includes('SL') ? 'STOP LOSS' : 'CLOSED';
     const pnlSol = (parseFloat(pos.realized_sol) || 0) - (parseFloat(pos.sol_spent) || 0);
     return `
-    <div class="hist-row" onclick="openChartModal('${esc(pos.token_ca)}', '${esc(pos.symbol)}', '', '')">
+    <div class="hist-row" onclick="openChartModal('${jsq(pos.token_ca)}', '${jsq(pos.symbol)}', '', '')">
       <div class="hist-left">
         <div class="hist-symbol-row">
           <span class="hist-symbol">$${esc(pos.symbol)}</span>
@@ -884,8 +948,9 @@ function connectWS() {
 
   const loc = window.location;
   const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+  const aq = authQuery();
   try {
-    ws = new WebSocket(`${proto}//${loc.host}/ws/live`);
+    ws = new WebSocket(`${proto}//${loc.host}/ws/live${aq ? '?' + aq : ''}`);
   } catch (e) {
     setConn('offline');
     scheduleReconnect();
@@ -897,6 +962,7 @@ function connectWS() {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+      if (data.type === 'PING') { state.lastTickAt = Date.now(); setConn('live'); return; }
       applyPayload(data);
       setConn('live');
     } catch (e) {
@@ -916,6 +982,15 @@ function scheduleReconnect() {
   setTimeout(connectWS, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 1.5, 8000);
 }
+
+// Staleness watchdog: koneksi setengah-mati tidak memicu onclose — pill bisa
+// tetap "LIVE" sementara harga beku. >3.5 detik tanpa tick/ping = paksa close
+// agar reconnect berjalan.
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN && state.lastTickAt && Date.now() - state.lastTickAt > 3500) {
+    try { ws.close(); } catch (e) { /* noop */ }
+  }
+}, 1000);
 
 connPill.addEventListener('click', () => {
   if (connPill.classList.contains('is-offline')) {
@@ -1472,7 +1547,7 @@ async function importWallet() {
 async function revealPrivateKey() {
   if (!confirm('Tampilkan private key wallet trading ini? Pastikan tidak ada yang melihat layar kamu.')) return;
   try {
-    const res = await fetch('/api/wallet/export');
+    const res = await fetch('/api/wallet/export', { method: 'POST' });
     const data = await res.json();
     if (data.success && data.private_key_base58) {
       document.getElementById('pkValue').value = data.private_key_base58;
@@ -1769,6 +1844,9 @@ async function submitTrade() {
     payload.position_id = trade.positionId;
     payload.percent = trade.percent;
   }
+  // Idempotensi: server menolak client_id yang sama (409) — double-click /
+  // retry jaringan tidak boleh mengeksekusi swap on-chain dua kali.
+  payload.client_id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2));
 
   btn.disabled = true;
   try {

@@ -1,12 +1,14 @@
 import asyncio
+import hmac
 import json
+import math
+import secrets
 import sqlite3
 import os
 import sys
 import time
 from collections import deque
 from aiohttp import web, ClientSession, ClientTimeout
-import aiohttp_cors
 # ---------------------------------------------------------------------------
 # Engine linkage.
 # The bridge normally runs on the same box as the engine and reads its SQLite
@@ -37,6 +39,53 @@ WSOL_MINT = "So11111111111111111111111111111111111111112"
 DEXSCREENER_TOKEN_URL = "https://api.dexscreener.com/latest/dex/tokens/{cas}"
 JUPITER_QUOTE_URL = "https://api.jup.ag/swap/v1/quote"
 APP_STARTED_TS = time.time()
+
+# ---------------------------------------------------------------------------
+# AUTH: semua /api/* dan /ws/* wajib shared-secret token. Dulu bridge bound
+# 0.0.0.0 tanpa auth apa pun — export private key & live trade bisa dipanggil
+# siapa pun yang menemukan port 8000. Token: env DASHBOARD_AUTH_TOKEN, atau
+# otomatis dibuat sekali ke dashboard_token.txt (chmod 600).
+# ---------------------------------------------------------------------------
+AUTH_TOKEN = os.environ.get("DASHBOARD_AUTH_TOKEN", "")
+_TOKEN_FILE = os.path.join(os.path.dirname(__file__), "dashboard_token.txt")
+if not AUTH_TOKEN:
+    _tok_src = "token auth BARU dibuat"
+    try:
+        if os.path.exists(_TOKEN_FILE):
+            with open(_TOKEN_FILE) as _f:
+                AUTH_TOKEN = _f.read().strip()
+        if not AUTH_TOKEN:
+            AUTH_TOKEN = secrets.token_urlsafe(32)
+            with open(_TOKEN_FILE, "w") as _f:
+                _f.write(AUTH_TOKEN)
+            try:
+                os.chmod(_TOKEN_FILE, 0o600)
+            except OSError:
+                pass
+        else:
+            _tok_src = "token auth dari dashboard_token.txt"
+    except Exception:
+        AUTH_TOKEN = ""
+        _tok_src = "GAGAL membuat token auth"
+else:
+    _tok_src = "token auth dari env DASHBOARD_AUTH_TOKEN"
+if AUTH_TOKEN:
+    print(f"🔐 [AUTH] {_tok_src} — wajib dikirim sebagai ?auth=... atau Bearer (lihat dashboard_token.txt)")
+
+@web.middleware
+async def auth_middleware(request, handler):
+    path = request.path
+    if not (path.startswith("/api/") or path.startswith("/ws/")) or not AUTH_TOKEN:
+        return await handler(request)
+    header = request.headers.get("Authorization", "")
+    qtoken = request.query.get("auth", "")
+    supplied = header[7:].strip() if header.startswith("Bearer ") else qtoken
+    if supplied and hmac.compare_digest(supplied, AUTH_TOKEN):
+        return await handler(request)
+    raise web.HTTPUnauthorized(text="unauthorized")
+
+# Idempotensi trade: client_id terakhir (anti double-submit / retry jaringan)
+_RECENT_CLIENT_IDS = deque(maxlen=512)
 
 # IN-MEMORY RAM CACHE FOR SUB-MILLISECOND (1MS) DISPATCH
 in_memory_state = {
@@ -107,8 +156,11 @@ async def cto_sentinel_loop(app):
 
 def get_db_connection(read_only=True):
     mode = "ro" if read_only else "rw"
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode={mode}", uri=True)
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode={mode}", uri=True, timeout=0.25)
     conn.row_factory = sqlite3.Row
+    # WAL engine menulis tiap 4s: tanpa busy_timeout, burst tulis engine
+    # memunculkan "database is locked" sebagai tick gagal di dashboard.
+    conn.execute("PRAGMA busy_timeout=250")
     return conn
 
 def sync_ram_state_from_engine_db():
@@ -136,9 +188,9 @@ def sync_ram_state_from_engine_db():
         srow = c.fetchone()
         stats = dict(srow) if srow else {}
 
-        # Enrich stats
+        # Enrich stats — MAX(rowid) O(1) via PK, dulu count(*) full-scan 5x/detik
         stats["active_positions_count"] = len(active_positions)
-        c.execute("SELECT count(*) FROM signals")
+        c.execute("SELECT COALESCE(MAX(rowid), 0) FROM signals")
         stats["total_signals_count"] = c.fetchone()[0]
 
         conn.close()
@@ -407,9 +459,12 @@ async def api_update_wallet_settings(request):
     try:
         body = await request.json()
         user_id = body.get("user_id", "6166029678")
-        buy_sol = float(body.get("default_buy_sol", 0.1))
-        slippage = float(body.get("slippage_pct", 15.0))
+        # Server-side clamp: API tidak boleh memercayai nilai bebas dari body
+        buy_sol = min(max(float(body.get("default_buy_sol", 0.1) or 0.1), 0.001), 5.0)
+        slippage = min(max(float(body.get("slippage_pct", 15.0) or 15.0), 0.1), 50.0)
         auto_buy = 1 if body.get("auto_buy_enabled") else 0
+    except (TypeError, ValueError):
+        return web.json_response({"success": False, "error": "Nilai setting tidak valid"}, status=400)
 
         conn = get_db_connection(False)
         c = conn.cursor()
@@ -516,8 +571,23 @@ async def api_trade(request):
     ca = (body.get("ca") or "").strip()
     symbol = (body.get("symbol") or "TOKEN").strip()
     position_id = body.get("position_id")
-    percent = min(max(float(body.get("percent", 100) or 100), 1.0), 100.0)
-    amount_sol = float(body.get("amount_sol", 0) or 0)
+    # JSON mengizinkan NaN/Infinity: NaN lolos semua perbandingan numerik
+    # dan mengkorupsi saldo sandbox (NULL). isfinite() wajib.
+    try:
+        percent = min(max(float(body.get("percent", 100) or 100), 1.0), 100.0)
+        amount_sol = float(body.get("amount_sol", 0) or 0)
+    except (TypeError, ValueError):
+        return web.json_response({"success": False, "error": "percent/amount_sol harus angka"}, status=400)
+    if not (math.isfinite(percent) and math.isfinite(amount_sol)):
+        return web.json_response({"success": False, "error": "percent/amount_sol harus finite"}, status=400)
+
+    # Idempotensi: dedupe client_id (double-click / retry jaringan tidak boleh
+    # mengeksekusi swap on-chain dua kali)
+    client_id = str(body.get("client_id") or "")
+    if client_id:
+        if client_id in _RECENT_CLIENT_IDS:
+            return web.json_response({"success": False, "error": "Permintaan duplikat (client_id sama)"}, status=409)
+        _RECENT_CLIENT_IDS.append(client_id)
 
     if action not in ("buy", "sell"):
         return web.json_response({"success": False, "error": "action harus buy/sell"}, status=400)
@@ -547,7 +617,8 @@ async def api_trade(request):
         if price_usd <= 0:
             return web.json_response({"success": False, "error": "Harga token tidak valid"}, status=400)
 
-        slippage_pct = float(body.get("slippage_pct", 15) or 15)
+        # Server-side clamp: UI membatasi slippage, API tidak boleh memercayai body
+        slippage_pct = min(max(float(body.get("slippage_pct", 15) or 15), 0.1), 50.0)
         slippage_bps = int(slippage_pct * 100)
 
         if mode == "live":
@@ -586,24 +657,39 @@ async def api_trade(request):
 
         now_ts = int(time.time() * 1000)
         conn = get_db_connection(False)
+        conn.isolation_level = None  # autocommit-off: BEGIN eksplisit di bawah
         c = conn.cursor()
-        c.execute("SELECT virtual_balance_sol FROM paper_account_stats WHERE id=1")
-        bal_row = c.fetchone()
-        balance = float(bal_row["virtual_balance_sol"]) if bal_row else 0.1
-        if amount_sol > balance:
+        try:
+            # BEGIN IMMEDIATE: cek saldo + INSERT + debit dalam satu transaksi
+            # (dulu dua buy konkuren sama-sama lolos cek → saldo bisa negatif)
+            c.execute("BEGIN IMMEDIATE")
+            c.execute("SELECT virtual_balance_sol FROM paper_account_stats WHERE id=1")
+            bal_row = c.fetchone()
+            balance = float(bal_row["virtual_balance_sol"]) if bal_row else 0.1
+            if amount_sol > balance:
+                conn.rollback()
+                return web.json_response({"success": False, "error": f"Saldo sandbox tidak cukup ({balance:.4f} SOL)"}, status=400)
+            c.execute("""
+                INSERT INTO paper_trading_positions
+                (token_ca, symbol, sol_spent, tokens_bought, tokens_remaining, entry_price_usd, entry_mcap,
+                 current_price_usd, current_mcap, peak_mcap, peak_multiplier, realized_sol, tp1_hit, status,
+                 score, strategy, liquidity_usd, sm_count, execution_route, token_decimals, entry_quote_ts, entry_data_source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1.0, 0.0, 0, 'OPEN', 0, 'Manual Dashboard', ?, 0, 'Manual Buy (Paper)', ?, ?, 'Manual Dashboard Buy — DexScreener + Jupiter quote')
+            """, (ca, symbol, amount_sol, tokens_bought, tokens_bought, price_usd, mcap, price_usd, mcap, mcap, liq, token_decimals, now_ts))
+            pos_id = c.lastrowid
+            cur2 = c.execute("UPDATE paper_account_stats SET virtual_balance_sol = virtual_balance_sol - ?, total_trades = total_trades + 1 WHERE id = 1 AND virtual_balance_sol >= ?", (amount_sol, amount_sol))
+            if cur2.rowcount == 0:
+                conn.rollback()
+                return web.json_response({"success": False, "error": f"Saldo sandbox tidak cukup ({balance:.4f} SOL)"}, status=400)
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
             conn.close()
-            return web.json_response({"success": False, "error": f"Saldo sandbox tidak cukup ({balance:.4f} SOL)"}, status=400)
-        c.execute("""
-            INSERT INTO paper_trading_positions
-            (token_ca, symbol, sol_spent, tokens_bought, tokens_remaining, entry_price_usd, entry_mcap,
-             current_price_usd, current_mcap, peak_mcap, peak_multiplier, realized_sol, tp1_hit, status,
-             score, strategy, liquidity_usd, sm_count, execution_route, token_decimals, entry_quote_ts, entry_data_source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1.0, 0.0, 0, 'OPEN', 0, 'Manual Dashboard', ?, 0, 'Manual Buy (Paper)', ?, ?, 'Manual Dashboard Buy — DexScreener + Jupiter quote')
-        """, (ca, symbol, amount_sol, tokens_bought, tokens_bought, price_usd, mcap, price_usd, mcap, mcap, liq, token_decimals, now_ts))
-        pos_id = c.lastrowid
-        c.execute("UPDATE paper_account_stats SET virtual_balance_sol = virtual_balance_sol - ?, total_trades = total_trades + 1 WHERE id = 1", (amount_sol,))
-        conn.commit()
-        conn.close()
         sync_ram_state_from_engine_db()
         blog(f"MANUAL BUY ${symbol} — {amount_sol:.2f} SOL @ ${price_usd:,.8f} (paper, ~{tokens_bought:,.0f} token)", "TRADE", "success")
         return web.json_response({"success": True, "mode": "paper", "position_id": pos_id, "tokens_bought": tokens_bought, "message": f"Paper buy ${symbol} — {tokens_bought:,.0f} token"})
@@ -641,6 +727,22 @@ async def api_trade(request):
             sig = await swap_router.execute_swap(keypair, quote)
             if not sig:
                 return web.json_response({"success": False, "error": "Swap jual gagal dieksekusi"}, status=502)
+            # Update record paper agar posisi tidak bisa dijual ULANG dari UI
+            # (record bukan sumber on-chain, tapi tanpa ini double-sell membakar
+            # gas dan mengacaukan akuntansi). Kondisional WHERE status='OPEN'.
+            _live_full = sell_frac >= 1.0 or tokens_to_sell >= tokens_remaining - 1e-9
+            try:
+                _conn = get_db_connection(False)
+                _c = _conn.cursor()
+                if _live_full:
+                    _c.execute("UPDATE paper_trading_positions SET tokens_remaining=0, status='CLOSED', closed_at=datetime('now','localtime'), exit_reason='MANUAL DASHBOARD SELL (LIVE)' WHERE id=? AND status='OPEN'", (position_id,))
+                else:
+                    _c.execute("UPDATE paper_trading_positions SET tokens_remaining = tokens_remaining - ? WHERE id=? AND status='OPEN'", (tokens_to_sell, position_id))
+                _conn.commit()
+                _conn.close()
+                sync_ram_state_from_engine_db()
+            except Exception:
+                pass
             return web.json_response({"success": True, "mode": "live", "tx_signature": sig, "message": f"Sell ${pos['symbol']} sukses — tx: {sig[:12]}…"})
         except Exception as e:
             return web.json_response({"success": False, "error": f"Live sell gagal: {e}"}, status=500)
@@ -652,7 +754,8 @@ async def api_trade(request):
     if price_usd <= 0:
         return web.json_response({"success": False, "error": "Harga live tidak tersedia"}, status=503)
     if sol_price <= 0:
-        sol_price = 200.0  # conservative fallback for SOL->USD conversion
+        # Jangan pernah mencatat PnL memakai harga SOL fiktif — tolak request
+        return web.json_response({"success": False, "error": "Harga SOL tidak tersedia, coba lagi"}, status=503)
     usd_value = tokens_to_sell * price_usd
     realized_sol = usd_value / sol_price
 
@@ -669,16 +772,24 @@ async def api_trade(request):
     new_remaining = 0.0 if full_close else tokens_remaining - tokens_to_sell
     new_realized = float(pos["realized_sol"] or 0) + realized_sol
     if full_close:
-        c.execute("""
+        # Kondisional WHERE status='OPEN': dua sell konkuren tidak boleh
+        # sama-sama mengkredit realized_sol (dulu double credit mungkin).
+        cur_close = c.execute("""
             UPDATE paper_trading_positions SET tokens_remaining=0, realized_sol=?, exit_price_usd=?, current_price_usd=?,
                 current_mcap=?, status='CLOSED', exit_reason='MANUAL DASHBOARD SELL', closed_at=datetime('now','localtime'),
-                hold_duration_sec=? WHERE id=?
+                hold_duration_sec=? WHERE id=? AND status='OPEN'
         """, (new_realized, price_usd, price_usd, float(pair.get("marketCap") or pos["current_mcap"] or 0) if pair else pos["current_mcap"], hold_sec, position_id))
+        if cur_close.rowcount == 0:
+            conn.close()
+            return web.json_response({"success": False, "error": "Posisi sudah tertutup (duplikat)"}, status=409)
         is_win = 1 if new_realized >= float(pos["sol_spent"]) else 0
         c.execute("UPDATE paper_account_stats SET win_trades = win_trades + ?, lose_trades = lose_trades + ? WHERE id=1", (is_win, 1 - is_win))
     else:
-        c.execute("UPDATE paper_trading_positions SET tokens_remaining=?, realized_sol=?, exit_price_usd=? WHERE id=?",
+        cur_part = c.execute("UPDATE paper_trading_positions SET tokens_remaining=?, realized_sol=?, exit_price_usd=? WHERE id=? AND status='OPEN'",
                   (new_remaining, new_realized, price_usd, position_id))
+        if cur_part.rowcount == 0:
+            conn.close()
+            return web.json_response({"success": False, "error": "Posisi sudah tertutup (duplikat)"}, status=409)
     c.execute("UPDATE paper_account_stats SET virtual_balance_sol = virtual_balance_sol + ?, realized_pnl_sol = realized_pnl_sol + ? WHERE id=1",
               (realized_sol, pnl_sol))
     conn.commit()
@@ -788,7 +899,9 @@ async def api_token_meta(request):
 # --- WEBSOCKET ENGINE EVENT BUS (ZERO EXTERNAL API DELAY) ---
 
 async def websocket_handler(request):
-    ws = web.WebSocketResponse()
+    # heartbeat=30: koneksi setengah-mati (TCP hidup, peer hilang) akan
+    # terdeteksi & ditutup, tidak lagi jadi zombie di app['websockets'].
+    ws = web.WebSocketResponse(heartbeat=30.0)
     await ws.prepare(request)
     request.app['websockets'].add(ws)
 
@@ -826,8 +939,26 @@ async def live_broadcaster(app):
             if not app['websockets']:
                 continue
 
-            # Refresh RAM cache from engine WAL
-            sync_ram_state_from_engine_db()
+            # Sync DB → RAM di thread executor: sqlite3 sinkron di event loop
+            # membekukan seluruh server (WS, REST) selama proses berlangsung.
+            await asyncio.to_thread(sync_ram_state_from_engine_db)
+
+            # Skip tick identik: engine hanya update tiap 4s, jadi 19 dari 20
+            # tick payloadnya byte-identik — jangan buang serialisasi+kirim.
+            _ver = (in_memory_state["last_updated_ts"], len(in_memory_state["signals"]),
+                    len(in_memory_state["active_positions"]), len(in_memory_state["closed_positions"]))
+            if _ver == app.get("_last_payload_ver") and app['websockets'] == app.get("_sent_clients", set()):
+                # Tetap kirim heartbeat mini: client memakai tick-age untuk
+                # membedakan "pasar tenang" dari "koneksi mati".
+                ping = json.dumps({"type": "PING", "server_time_ms": int(time.time() * 1000)})
+                for ws in list(app['websockets']):
+                    try:
+                        await ws.send_str(ping)
+                    except Exception:
+                        app['websockets'].discard(ws)
+                continue
+            app["_last_payload_ver"] = _ver
+            app["_sent_clients"] = set(app['websockets'])
 
             payload = json.dumps({
                 "type": "TICK",
@@ -842,7 +973,9 @@ async def live_broadcaster(app):
                 try:
                     await ws.send_str(payload)
                 except Exception:
-                    pass
+                    # Klien mati WAJIB dikeluarkan; dulu `pass` membuat zombie
+                    # menumpuk selamanya di set (ws_clients melebar palsu).
+                    app['websockets'].discard(ws)
         except asyncio.CancelledError:
             break
         except Exception:
@@ -859,7 +992,9 @@ async def start_background_tasks(app):
 async def cleanup_background_tasks(app):
     app['broadcaster'].cancel()
     app['cto_sentinel'].cancel()
-    await app['broadcaster']
+    import contextlib
+    with contextlib.suppress(asyncio.CancelledError):
+        await app['broadcaster']
     for ws in list(app['websockets']):
         await ws.close()
     await app['http_session'].close()
@@ -871,10 +1006,12 @@ async def static_file_handler(request):
     name = request.match_info['filename']
     if name not in ('app.css', 'app.js', 'favicon.svg', 'logo.svg'):
         raise web.HTTPNotFound()
-    return web.FileResponse(os.path.join(PUBLIC_DIR, name), headers={'Cache-Control': 'no-cache'})
+    # Aset ber-versioning via nama file statis: cache singkat mengurangi
+    # re-fetch tanpa menyulitkan update (index tetap no-cache).
+    return web.FileResponse(os.path.join(PUBLIC_DIR, name), headers={'Cache-Control': 'public, max-age=300'})
 
 def create_app():
-    app = web.Application()
+    app = web.Application(middlewares=[auth_middleware])
     app.router.add_get('/', index_handler)
     app.router.add_get('/portofolio', index_handler)
     app.router.add_get('/evaluasi', index_handler)
@@ -894,21 +1031,17 @@ def create_app():
     app.router.add_get('/api/token_meta', api_token_meta)
     app.router.add_get('/api/logs', api_logs)
     app.router.add_get('/api/wallet', api_get_wallet)
-    app.router.add_get('/api/wallet/export', api_export_wallet)
+    # Export private key = operasi sensitif: wajib POST (dulu GET yang bisa
+    # dipicu preload/preview apapun, dan tanpa auth bisa dibaca siapa pun)
+    app.router.add_post('/api/wallet/export', api_export_wallet)
     app.router.add_post('/api/wallet/settings', api_update_wallet_settings)
     app.router.add_post('/api/wallet/import', api_wallet_import)
     app.router.add_get('/api/trade/preview', api_trade_preview)
     app.router.add_post('/api/trade', api_trade)
 
-    cors = aiohttp_cors.setup(app, defaults={
-        "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*"
-        )
-    })
-    for route in list(app.router.routes()):
-        cors.add(route)
+    # CORS dihapus total: SPA di-layani same-origin, tidak ada skenario
+    # cross-origin yang sah. Dulu wildcard + allow_credentials memicu
+    # drive-by: website mana pun bisa fetch export key / live trade.
 
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
