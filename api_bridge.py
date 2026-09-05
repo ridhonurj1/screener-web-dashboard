@@ -445,7 +445,9 @@ async def api_export_wallet(request):
             return web.json_response({"success": False, "error": "Wallet not found"}, status=404)
 
         enc_pk = row["encrypted_private_key"]
-        decrypted_b58 = wallet_manager.decrypt_private_key(enc_pk)
+        # dulu memanggil wallet_manager.decrypt_private_key() yang TIDAK ADA
+        # -> export selalu 500 sejak endpoint ini dibuat
+        decrypted_b58 = wallet_manager._decrypt(enc_pk)
 
         return web.json_response({
             "success": True,
