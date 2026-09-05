@@ -98,16 +98,48 @@ def sync_ram_state_from_engine_db():
         in_memory_state["closed_positions"] = closed_positions
         in_memory_state["stats"] = stats
         in_memory_state["last_updated_ts"] = time.time()
+        in_memory_state["perf"]["sync_ok"] = True
         if signals:
             in_memory_state["last_signal_rowid"] = signals[0]["rowid"]
 
     except Exception:
-        pass
+        in_memory_state["perf"]["sync_ok"] = False
     finally:
         dt_ms = (time.perf_counter() - t0) * 1000.0
         perf = in_memory_state["perf"]
         perf["last_sync_ms"] = round(dt_ms, 2)
         perf["avg_sync_ms"] = round((perf["avg_sync_ms"] * 0.9 + dt_ms * 0.1) if perf["avg_sync_ms"] else dt_ms, 2)
+
+def compute_engine_health():
+    """
+    Composite bridge→engine health (0-100):
+    - 40 pts DB reachable (last SQLite WAL sync attempt succeeded)
+    - 40 pts tick freshness (broadcast loop reading RAM cache; full score <=1s)
+    - 20 pts engine modules importable (wallet, swap router, evaluator)
+    """
+    now = time.time()
+    last_ts = in_memory_state["last_updated_ts"]
+    tick_age = now - last_ts if last_ts else None
+    if tick_age is None:
+        tick_pts = 0
+    elif tick_age <= 1:
+        tick_pts = 40
+    elif tick_age < 5:
+        tick_pts = int(40 * (1 - (tick_age - 1) / 4))
+    else:
+        tick_pts = 0
+    db_ok = bool(in_memory_state["perf"].get("sync_ok"))
+    db_pts = 40 if db_ok else 0
+    mod_pts = 20 if HAS_ENGINE_MODULES else 0
+    score = tick_pts + db_pts + mod_pts
+    status = "HEALTHY" if score >= 80 else "DEGRADED" if score >= 50 else "CRITICAL"
+    return {
+        "score": score,
+        "status": status,
+        "db_ok": db_ok,
+        "tick_age_ms": int(tick_age * 1000) if tick_age is not None else None,
+        "engine_modules": HAS_ENGINE_MODULES
+    }
 
 # --- REST APIS (READ FROM MEMORY < 1MS) ---
 
@@ -540,6 +572,7 @@ async def api_network(request):
         "sol_change_24h_pct": sol_change,
         "base_fee_sol": 0.000005,
         "priority_fee_sol": 0.0001,
+        "health": compute_engine_health(),
         "engine": {
             "tick_interval_ms": 200,
             "last_sync_ms": perf["last_sync_ms"],
@@ -650,17 +683,20 @@ async def cleanup_background_tasks(app):
     await app['http_session'].close()
 
 async def index_handler(request):
-    return web.FileResponse(os.path.join(PUBLIC_DIR, 'index.html'))
+    return web.FileResponse(os.path.join(PUBLIC_DIR, 'index.html'), headers={'Cache-Control': 'no-cache'})
 
 async def static_file_handler(request):
     name = request.match_info['filename']
     if name not in ('app.css', 'app.js', 'favicon.svg', 'logo.svg'):
         raise web.HTTPNotFound()
-    return web.FileResponse(os.path.join(PUBLIC_DIR, name))
+    return web.FileResponse(os.path.join(PUBLIC_DIR, name), headers={'Cache-Control': 'no-cache'})
 
 def create_app():
     app = web.Application()
     app.router.add_get('/', index_handler)
+    app.router.add_get('/portofolio', index_handler)
+    app.router.add_get('/evaluasi', index_handler)
+    app.router.add_get('/recap', index_handler)
     app.router.add_get('/ws/live', websocket_handler)
     app.router.add_get('/{filename}', static_file_handler)
 

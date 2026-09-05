@@ -620,6 +620,7 @@ function applyPayload(data) {
   renderActivePositions();
   renderHistory();
   renderPortfolio(false);
+  renderRecap();
   renderStats();
 }
 
@@ -702,7 +703,7 @@ async function httpBootstrap() {
 
 const drawer = document.getElementById('sideDrawer');
 const backdrop = document.getElementById('drawerBackdrop');
-const DRAWER_TABS = ['wallets', 'recap', 'wallet'];
+const DRAWER_TABS = ['wallets', 'wallet'];
 
 function openDrawer(tab) {
   backdrop.classList.remove('hidden');
@@ -728,7 +729,6 @@ function switchDrawerTab(tab) {
   });
   if (tab === 'wallets') loadSmartWallets();
   if (tab === 'wallet') loadWalletData();
-  if (tab === 'recap') renderRecap();
 }
 
 /* ---------------- Smart money ---------------- */
@@ -801,7 +801,12 @@ function isWinTrade(c) {
   return (parseFloat(c.realized_sol) || 0) >= (parseFloat(c.sol_spent) || 0);
 }
 
-function renderRecap() {
+let recapSig = '';
+
+function renderRecap(force) {
+  const sig = recapPeriod + '|' + state.closedPositions.map(c => c.id).join(',');
+  if (!force && sig === recapSig) return;
+  recapSig = sig;
   const days = { daily: 1, weekly: 7, monthly: 30, all: 0 }[recapPeriod] || 0;
   const list = closedInPeriod(days);
   document.querySelectorAll('#recapTabs button').forEach(b => b.classList.toggle('active', b.dataset.tf === recapPeriod));
@@ -862,16 +867,12 @@ function renderRecap() {
 
 function setRecapPeriod(tf) {
   recapPeriod = tf;
-  renderRecap();
+  renderRecap(true);
 }
 
 document.getElementById('recapTabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tf]');
   if (btn) setRecapPeriod(btn.dataset.tf);
-});
-
-document.querySelector('.engine-report').addEventListener('toggle', e => {
-  if (e.target.open) loadEngineRecap(recapPeriod);
 });
 
 async function loadEngineRecap(tf) {
@@ -959,7 +960,8 @@ function equityChartSVG(points) {
 }
 
 function renderPortfolio(force) {
-  const el = document.getElementById('sideTabContentPortfolio');
+  const el = document.getElementById('portfolioView');
+  if (!el) return;
   const stats = state.stats || {};
   const sig = `${stats.virtual_balance_sol}|${state.activePositions.map(p => p.id + ':' + p.realized_sol).join(',')}|${state.closedPositions.map(p => p.id).join(',')}`;
   if (!force && sig === pfSig) return;
@@ -1219,8 +1221,6 @@ document.querySelectorAll('.side-tab').forEach(btn => {
     document.querySelectorAll('.side-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('sideTabContentOpen').classList.toggle('hidden', state.sideTab !== 'open');
     document.getElementById('sideTabContentHistory').classList.toggle('hidden', state.sideTab !== 'history');
-    document.getElementById('sideTabContentPortfolio').classList.toggle('hidden', state.sideTab !== 'portfolio');
-    if (state.sideTab === 'portfolio') renderPortfolio(true);
   });
 });
 
@@ -1479,11 +1479,47 @@ async function pollNetwork() {
     document.getElementById('sbWs').innerHTML =
       `<span class="sb-k">WS</span> <b class="mono">${e.ws_clients ?? 0} klien · uptime ${fmtUptime(e.uptime_sec)}</b>`;
 
+    if (d.health) {
+      const h = d.health;
+      const el = document.getElementById('sbHealth');
+      const cls = h.score >= 80 ? 'up' : h.score >= 50 ? 'warn' : 'down';
+      el.innerHTML = `<span class="sb-k">HEALTH</span> <b class="mono ${cls}">${h.score}% ${h.status}</b>`;
+      el.title = `Health engine ${h.score}/100 — DB: ${h.db_ok ? 'terhubung' : 'gagal dibaca'}, usia tick: ${h.tick_age_ms ?? '—'}ms, modul engine: ${h.engine_modules ? 'termuat' : 'tidak tersedia'}`;
+    }
+
     if (trade && trade.action === 'sell') updateSellInfo();
   } catch (e) { /* status bar is non-critical */ }
 }
 
+/* ---------------- Page routing ---------------- */
+
+const ROUTE_PAGE = { '/': 'terminal', '/portofolio': 'portofolio', '/evaluasi': 'evaluasi', '/recap': 'recap' };
+const currentPage = ROUTE_PAGE[window.location.pathname.replace(/\/+$/, '') || '/'] || 'terminal';
+
+function activatePage() {
+  document.body.dataset.page = currentPage;
+  document.getElementById('mainTerminal').classList.toggle('hidden', currentPage !== 'terminal');
+  document.getElementById('pagePortofolio').classList.toggle('hidden', currentPage !== 'portofolio');
+  document.getElementById('pageEvaluasi').classList.toggle('hidden', currentPage !== 'evaluasi');
+  document.getElementById('pageRecap').classList.toggle('hidden', currentPage !== 'recap');
+  document.querySelectorAll('.pagenav a').forEach(a => a.classList.toggle('active', a.dataset.nav === currentPage));
+}
+
+let engineTf = 'daily';
+document.getElementById('engineTabs').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tf]');
+  if (!btn) return;
+  engineTf = btn.dataset.tf;
+  document.querySelectorAll('#engineTabs button').forEach(b => b.classList.toggle('active', b === btn));
+  loadEngineRecap(engineTf);
+});
+
 /* ---------------- Boot ---------------- */
+
+activatePage();
+if (currentPage === 'portofolio') renderPortfolio(true);
+if (currentPage === 'evaluasi') renderRecap(true);
+if (currentPage === 'recap') loadEngineRecap(engineTf);
 
 httpBootstrap();
 connectWS();

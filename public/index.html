@@ -28,12 +28,6 @@
       </div>
 
       <div class="header-right">
-        <!-- Live connection pill -->
-        <button id="connPill" class="conn-pill is-connecting" title="Status koneksi ke engine">
-          <span class="dot"></span>
-          <span id="connLabel">MENGHUBUNGKAN</span>
-        </button>
-
         <!-- Automation status chip -->
         <button id="autoBuyChip" class="auto-chip is-off" onclick="openDrawer('wallet')" title="Status automasi engine — klik untuk atur">
           <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.9 4.9l2.8 2.8m8.6 8.6 2.8 2.8M2 12h4m12 0h4M4.9 19.1l2.8-2.8m8.6-8.6 2.8-2.8"/></svg>
@@ -65,6 +59,26 @@
         </button>
       </div>
     </header>
+
+    <!-- ==================== PAGE NAV ==================== -->
+    <nav class="pagenav" aria-label="Navigasi halaman">
+      <a href="/" data-nav="terminal" class="active">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+        Terminal
+      </a>
+      <a href="/portofolio" data-nav="portofolio">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8"/><path d="m9 11 3 3L22 4"/></svg>
+        Portofolio
+      </a>
+      <a href="/evaluasi" data-nav="evaluasi">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        Evaluasi
+      </a>
+      <a href="/recap" data-nav="recap">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8m8 4H8m2-8H8"/></svg>
+        Recap
+      </a>
+    </nav>
 
     <!-- ==================== KPI STRIP ==================== -->
     <section class="kpi-strip" aria-label="Statistik portofolio">
@@ -102,7 +116,7 @@
     </section>
 
     <!-- ==================== MAIN ==================== -->
-    <main class="main">
+    <main class="main" id="mainTerminal">
 
       <!-- RADAR -->
       <section class="panel panel-radar" aria-label="Alpha screener radar">
@@ -147,19 +161,92 @@
             <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             Riwayat <span class="count" id="histBadge">0</span>
           </button>
-          <button class="side-tab" id="sideTabPortfolio" data-tab="portfolio" role="tab">
-            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8"/><path d="m9 11 3 3L22 4"/><path d="M15 19l2 2 4-4"/></svg>
-            Portofolio
-          </button>
         </div>
         <div id="sideTabContentOpen" class="panel-body" role="tabpanel">
           <div class="skeleton pos"></div>
           <div class="skeleton pos"></div>
         </div>
         <div id="sideTabContentHistory" class="panel-body hidden" role="tabpanel"></div>
-        <div id="sideTabContentPortfolio" class="panel-body hidden" role="tabpanel"></div>
       </section>
 
+    </main>
+
+    <!-- ==================== PAGE: PORTOFOLIO ==================== -->
+    <main class="page hidden" id="pagePortofolio">
+      <div class="page-inner" id="portfolioView">
+        <div class="skeleton pos"></div>
+        <div class="skeleton pos"></div>
+      </div>
+    </main>
+
+    <!-- ==================== PAGE: EVALUASI ==================== -->
+    <main class="page hidden" id="pageEvaluasi">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Evaluasi Kinerja Engine</h1>
+            <p class="page-sub">Dihitung langsung dari riwayat trade engine — diperbarui real-time.</p>
+          </div>
+          <div class="recap-tabs" id="recapTabs" style="min-width:340px">
+            <button data-tf="daily" class="active">24 Jam</button>
+            <button data-tf="weekly">7 Hari</button>
+            <button data-tf="monthly">30 Hari</button>
+            <button data-tf="all">All-Time</button>
+          </div>
+        </div>
+
+        <div class="recap-stats page-grid-6" id="recapStats">
+          <div class="rc-stat"><div class="v" id="rcTrades">—</div><div class="k">Total Trade</div></div>
+          <div class="rc-stat"><div class="v" id="rcWinrate">—</div><div class="k">Win Rate</div></div>
+          <div class="rc-stat"><div class="v" id="rcNet">—</div><div class="k">Net PnL</div></div>
+          <div class="rc-stat"><div class="v" id="rcPF">—</div><div class="k">Profit Factor</div></div>
+          <div class="rc-stat"><div class="v" id="rcBest">—</div><div class="k">Trade Terbaik</div></div>
+          <div class="rc-stat"><div class="v" id="rcWorst">—</div><div class="k">Trade Terburuk</div></div>
+        </div>
+
+        <section class="page-card">
+          <div class="drawer-section-title"><span>Kinerja per Token</span><span class="sub">urut berdasarkan net PnL</span></div>
+          <div class="table-wrap">
+            <table class="data-table" id="recapSymbolTable">
+              <thead>
+                <tr><th>Token</th><th class="num">Trade</th><th class="num">Win</th><th class="num">Net SOL</th><th class="num">Peak</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="recapEmpty" class="empty-state hidden">
+              <div class="orb"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 3 5-6"/></svg></div>
+              <div class="title">Belum ada trade di periode ini</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-card">
+          <div class="drawer-section-title"><span>Insight Periode</span></div>
+          <div class="recap-box" id="recapInsight" style="white-space:normal">—</div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ==================== PAGE: RECAP (LAPORAN ENGINE) ==================== -->
+    <main class="page hidden" id="pageRecap">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Recap Resmi Engine</h1>
+            <p class="page-sub">Laporan rekapitulasi text-native dari modul evaluasi Ponyin v5.</p>
+          </div>
+          <div class="recap-tabs" id="engineTabs" style="min-width:340px">
+            <button data-tf="daily" class="active">24 Jam</button>
+            <button data-tf="weekly">7 Hari</button>
+            <button data-tf="monthly">30 Hari</button>
+            <button data-tf="all">All-Time</button>
+          </div>
+        </div>
+        <section class="page-card">
+          <div id="recapContentBox" class="recap-box" style="min-height:280px">Memuat laporan engine...</div>
+        </section>
+        <p class="page-foot-hint">Laporan ini dihasilkan modul <span class="mono">compact_evaluator</span> di sisi engine. Untuk analisis tabel &amp; grafik, gunakan halaman <a href="/evaluasi" style="color:var(--lime)">Evaluasi</a>.</p>
+      </div>
     </main>
 
     <!-- ==================== STATUS BAR (FOOTER) ==================== -->
@@ -170,7 +257,15 @@
         <span class="sb-sep">·</span>
         <span class="sb-dim">Ponyin v5.0</span>
       </div>
+
       <div class="sb-metrics">
+        <button id="connPill" class="conn-pill is-connecting sb-pill" title="Status koneksi ke engine — klik saat offline untuk sambung ulang">
+          <span class="dot"></span>
+          <span id="connLabel">MENGHUBUNGKAN</span>
+        </button>
+        <span class="sb-item" id="sbHealth" title="Health engine: DB reachable (40) + tick freshness (40) + modul engine (20)">
+          <span class="sb-k">HEALTH</span> <b class="mono">—</b>
+        </span>
         <span class="sb-item" id="sbSol" title="Harga SOL live (DexScreener, cache 30s)">
           <span class="sb-k">SOL</span> <b class="mono">—</b>
         </span>
@@ -184,6 +279,7 @@
           <span class="sb-k">WS</span> <b class="mono">—</b>
         </span>
       </div>
+
       <div class="sb-right sb-dim">Data live dari engine via Tailscale</div>
     </footer>
   </div>
@@ -197,10 +293,6 @@
         <button id="btnTabWallets" class="drawer-tab active" onclick="switchDrawerTab('wallets')">
           <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
           Smart Money
-        </button>
-        <button id="btnTabRecap" class="drawer-tab" onclick="switchDrawerTab('recap')">
-          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
-          Evaluasi &amp; Recap
         </button>
         <button id="btnTabWallet" class="drawer-tab" onclick="switchDrawerTab('wallet')">
           <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
@@ -226,54 +318,6 @@
           <div class="skeleton pos"></div>
           <div class="skeleton pos"></div>
         </div>
-      </div>
-
-      <!-- RECAP -->
-      <div id="drawerTabRecap" class="drawer-pane hidden">
-        <div class="drawer-section-title">
-          <span>Evaluasi Kinerja Engine</span>
-          <span class="sub">dihitung dari riwayat trade</span>
-        </div>
-        <div class="recap-tabs" id="recapTabs">
-          <button data-tf="daily" class="active">24 Jam</button>
-          <button data-tf="weekly">7 Hari</button>
-          <button data-tf="monthly">30 Hari</button>
-          <button data-tf="all">All-Time</button>
-        </div>
-
-        <!-- Summary stat cards -->
-        <div class="recap-stats" id="recapStats">
-          <div class="rc-stat"><div class="v" id="rcTrades">—</div><div class="k">Total Trade</div></div>
-          <div class="rc-stat"><div class="v" id="rcWinrate">—</div><div class="k">Win Rate</div></div>
-          <div class="rc-stat"><div class="v" id="rcNet">—</div><div class="k">Net PnL</div></div>
-          <div class="rc-stat"><div class="v" id="rcPF">—</div><div class="k">Profit Factor</div></div>
-          <div class="rc-stat"><div class="v" id="rcBest">—</div><div class="k">Trade Terbaik</div></div>
-          <div class="rc-stat"><div class="v" id="rcWorst">—</div><div class="k">Trade Terburuk</div></div>
-        </div>
-
-        <!-- Per-symbol performance table -->
-        <div class="drawer-section-title"><span>Kinerja per Token</span></div>
-        <div class="table-wrap">
-          <table class="data-table" id="recapSymbolTable">
-            <thead>
-              <tr><th>Token</th><th class="num">Trade</th><th class="num">Win</th><th class="num">Net SOL</th><th class="num">Peak</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="recapEmpty" class="empty-state hidden">
-            <div class="orb"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 3 5-6"/></svg></div>
-            <div class="title">Belum ada trade di periode ini</div>
-          </div>
-        </div>
-
-        <!-- Hold time insight -->
-        <div class="recap-box" id="recapInsight" style="white-space:normal">—</div>
-
-        <!-- Engine official text report -->
-        <details class="engine-report">
-          <summary>Laporan resmi engine (teks Ponyin)</summary>
-          <div id="recapContentBox" class="recap-box">Memuat laporan engine...</div>
-        </details>
       </div>
 
       <!-- WALLET -->
