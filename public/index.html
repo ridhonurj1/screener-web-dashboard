@@ -759,8 +759,60 @@
       `;
     }
 
+    async function fetchHttpFallback() {
+      try {
+        const [resSig, resStats, resPos] = await Promise.all([
+          fetch('/api/signals').then(r => r.json()),
+          fetch('/api/stats').then(r => r.json()),
+          fetch('/api/positions').then(r => r.json())
+        ]);
+
+        if (resStats && resStats.data) {
+          const s = resStats.data;
+          document.getElementById('statBalance').innerText = `${parseFloat(s.virtual_balance_sol || 0.1).toFixed(4)} SOL`;
+          const pnl = parseFloat(s.realized_pnl_sol || 0);
+          const pnlEl = document.getElementById('statPnl');
+          pnlEl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(4)} SOL`;
+          pnlEl.className = `mono font-semibold ${pnl >= 0 ? 'text-jup-green' : 'text-jup-red'}`;
+
+          const total = (s.win_trades || 0) + (s.lose_trades || 0);
+          const winrate = total > 0 ? (((s.win_trades || 0) / total) * 100).toFixed(1) : '0.0';
+          document.getElementById('statWinRate').innerText = `${winrate}% (${s.win_trades || 0}W/${s.lose_trades || 0}L)`;
+        }
+
+        if (resSig && resSig.data && resSig.data.length > 0) {
+          document.getElementById('tokenBadge').innerText = `${resSig.data.length} Tokens`;
+          document.getElementById('signalsList').innerHTML = resSig.data.map(s => renderSignalCard(s, null)).join('');
+          lucide.createIcons();
+        }
+
+        if (resPos) {
+          const activePos = resPos.active || [];
+          document.getElementById('posBadge').innerText = `${activePos.length} Active`;
+          if (activePos.length > 0) {
+            document.getElementById('activePosList').innerHTML = activePos.map(p => renderActiveCard(p, null)).join('');
+          }
+
+          const closedPos = resPos.closed || [];
+          document.getElementById('drawerHistoryCount').innerText = closedPos.length;
+          if (closedPos.length > 0) {
+            document.getElementById('drawerHistoryList').innerHTML = closedPos.map(renderDrawerHistoryCard).join('');
+            lucide.createIcons();
+          }
+        }
+      } catch (e) {
+        console.error('HTTP Fallback error:', e);
+      }
+    }
+
     function connectWS() {
-      const wsUrl = `ws://${window.location.hostname || '127.0.0.1'}:8000/ws/live`;
+      // Fetch immediate snapshot via HTTP first so cards render instantly!
+      fetchHttpFallback();
+
+      // Use window.location.host so it works on both localhost AND IP:8000
+      const loc = window.location;
+      const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProto}//${loc.host}/ws/live`;
       const ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
