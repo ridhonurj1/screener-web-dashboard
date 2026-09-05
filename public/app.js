@@ -1957,12 +1957,12 @@ async function fetchRecapSignals() {
   } catch (e) { /* non-critical */ }
 }
 
-// MC LIVE = harga live dari engine (DB diupdate tiap ~4s): poll 5 detik
+// MC LIVE = harga live dari engine (tracker DB kini tiap 2s): poll 2 detik
 // selama halaman recap terbuka. Dulu hanya di-fetch SEKALI saat navigasi —
 // tabel Recent Signals tidak pernah update walau engine terus memantau.
 setInterval(() => {
   if (currentPage === 'recap') fetchRecapSignals();
-}, 5000);
+}, 2000);
 
 function renderEnginePerformance(force) {
   const tree = document.getElementById('recapTree');
