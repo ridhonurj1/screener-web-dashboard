@@ -1950,10 +1950,19 @@ async function fetchRecapSignals() {
     const data = await res.json();
     if (data.success && Array.isArray(data.data)) {
       recapSignals = data.data;
-      renderEnginePerformance();
+      // force: harga live berubah tanpa ID baru — signature berbasis ID saja
+      // membuat kolom MC ENTRY → LIVE tidak pernah bergerak
+      renderEnginePerformance(true);
     }
   } catch (e) { /* non-critical */ }
 }
+
+// MC LIVE = harga live dari engine (DB diupdate tiap ~4s): poll 5 detik
+// selama halaman recap terbuka. Dulu hanya di-fetch SEKALI saat navigasi —
+// tabel Recent Signals tidak pernah update walau engine terus memantau.
+setInterval(() => {
+  if (currentPage === 'recap') fetchRecapSignals();
+}, 5000);
 
 function renderEnginePerformance(force) {
   const tree = document.getElementById('recapTree');
