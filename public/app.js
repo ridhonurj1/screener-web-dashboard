@@ -1360,15 +1360,19 @@ function mountEquityChart(host, points) {
   const move = e => {
     const rect = svg.getBoundingClientRect();
     const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    const i = Math.round(fx * (n - 1));
+    const i = Math.min(n - 1, Math.max(0, Math.round(fx * (n - 1))));
     const p = points[i];
     const prev = points[Math.max(0, i - 1)];
     const d = p.v - prev.v;
+    // Kunci crosshair + titik ke VERTEX kurva (bukan X mouse dengan Y vertex):
+    // dulu X mengikuti mouse sementara Y menempel nilai vertex terdekat ->
+    // titik melayang di atas/bawah kurva setiap kali segmen miring.
+    const vx = xPct(i);
     cross.hidden = false; dot.hidden = false; tip.hidden = false;
-    cross.style.left = (fx * 100) + '%';
-    dot.style.left = (fx * 100) + '%';
+    cross.style.left = vx + '%';
+    dot.style.left = vx + '%';
     dot.style.top = yPct(p.v) + '%';
-    const px2 = Math.min(rect.width, Math.max(0, fx * rect.width));
+    const px2 = Math.min(rect.width, Math.max(0, (vx / 100) * rect.width));
     tip.style.left = Math.min(rect.width - 74, Math.max(74, px2)) + 'px';
     tip.style.top = `calc(${yPct(p.v)}% - 12px)`;
     const pnlTxt = `${p.v >= 0 ? '+' : ''}${p.v.toFixed(4)} SOL`;
