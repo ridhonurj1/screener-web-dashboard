@@ -77,6 +77,12 @@ async def auth_middleware(request, handler):
     path = request.path
     if not (path.startswith("/api/") or path.startswith("/ws/")) or not AUTH_TOKEN:
         return await handler(request)
+    # Jaringan privat (Tailscale 100.64/10, RFC1918, loopback) = akses penuh
+    # TANPA token — pengalaman pakai kembali seperti semula. Token hanya
+    # diwajibkan untuk koneksi dari internet publik (port 8000 terpapar di
+    # 0.0.0.0; itulah permukaan yang harus terlindungi).
+    if _is_private_peer(request):
+        return await handler(request)
     header = request.headers.get("Authorization", "")
     qtoken = request.query.get("auth", "")
     supplied = header[7:].strip() if header.startswith("Bearer ") else qtoken
@@ -86,6 +92,25 @@ async def auth_middleware(request, handler):
 
 # Idempotensi trade: client_id terakhir (anti double-submit / retry jaringan)
 _RECENT_CLIENT_IDS = deque(maxlen=512)
+
+# Jaringan yang dianggap tepercaya (tanpa token): loopback, RFC1918,
+# CGNAT/Tailscale 100.64.0.0/10, link-local.
+import ipaddress as _ipaddress
+_TRUSTED_NETS = [_ipaddress.ip_network(n) for n in (
+    "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+    "100.64.0.0/10", "169.254.0.0/16", "::1/128", "fc00::/7", "fe80::/10",
+)]
+
+def _is_private_peer(request) -> bool:
+    transport = request.transport
+    peer = transport.get_extra_info("peername") if transport else None
+    if not peer or not peer[0]:
+        return False
+    try:
+        ip = _ipaddress.ip_address(str(peer[0]))
+    except ValueError:
+        return False
+    return any(ip in net for net in _TRUSTED_NETS)
 
 # IN-MEMORY RAM CACHE FOR SUB-MILLISECOND (1MS) DISPATCH
 in_memory_state = {
