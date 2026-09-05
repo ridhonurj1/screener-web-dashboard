@@ -1,875 +1,473 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#070b12">
   <title>ScreenerNantiAja — Quant Solana Terminal</title>
-  
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', '-apple-system', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            jup: {
-              bg: '#0E141E',
-              surface: '#151D2C',
-              hover: '#1B263B',
-              border: '#212E45',
-              accent: '#C7F284',
-              accentHover: '#B2E266',
-              accentDark: 'rgba(199, 242, 132, 0.12)',
-              cyan: '#28D7B5',
-              green: '#00E887',
-              red: '#FF4D6A',
-              textMuted: '#8497B0',
-              textPrimary: '#F1F5F9'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      background-color: #0E141E;
-      color: #F1F5F9;
-      margin: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      font-family: 'Inter', sans-serif;
-    }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #0E141E; }
-    ::-webkit-scrollbar-thumb { background: #212E45; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #2F4263; }
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    .jup-card {
-      background-color: #151D2C;
-      border: 1px solid #212E45;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .jup-card:hover {
-      background-color: #1B263B;
-      border-color: #2D3E5E;
-      transform: translateY(-1px);
-    }
-
-    .tick-up { animation: pulseGreen 0.45s ease-out; }
-    .tick-down { animation: pulseRed 0.45s ease-out; }
-    @keyframes pulseGreen {
-      0% { color: #00E887; background-color: rgba(0, 232, 135, 0.25); }
-      100% { background-color: transparent; }
-    }
-    @keyframes pulseRed {
-      0% { color: #FF4D6A; background-color: rgba(255, 77, 106, 0.25); }
-      100% { background-color: transparent; }
-    }
-  </style>
+  <link rel="stylesheet" href="/app.css">
 </head>
-<body class="flex flex-col h-screen w-screen relative">
+<body>
+  <div id="app">
 
-  <!-- ==================== HEADER JUPITER ==================== -->
-  <header class="h-16 bg-[#0E141E] border-b border-jup-border/80 px-6 flex items-center justify-between shrink-0 z-30">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2.5 cursor-pointer" onclick="closeDrawer()">
-        <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-jup-cyan to-jup-accent flex items-center justify-center shadow-md">
-          <i data-lucide="zap" class="w-4 h-4 text-black font-extrabold fill-current"></i>
+    <!-- ==================== HEADER ==================== -->
+    <header class="header">
+      <div class="brand">
+        <img src="/logo.svg" alt="ScreenerNantiAja" class="brand-logo" width="32" height="32">
+        <div>
+          <span class="brand-name">Screener<span class="accent">Nanti</span>Aja</span>
+          <span class="brand-sub">Solana Alpha Terminal</span>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-base font-extrabold text-white tracking-tight">ScreenerNantiAja</span>
-          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-jup-accentDark text-jup-accent border border-jup-accent/30 font-semibold">
-            PONYIN v5.0
-          </span>
-        </div>
+        <span class="chip chip-lime" title="Versi scoring engine">PONYIN v5.0</span>
       </div>
 
-      <div class="h-4 w-px bg-jup-border mx-1"></div>
+      <div class="header-right">
+        <!-- Live connection pill -->
+        <button id="connPill" class="conn-pill is-connecting" title="Status koneksi ke engine">
+          <span class="dot"></span>
+          <span id="connLabel">MENGHUBUNGKAN</span>
+        </button>
 
-      <!-- Live Heartbeat -->
-      <div class="flex items-center gap-2 text-xs mono text-jup-textMuted">
-        <span class="flex items-center gap-1.5 font-medium text-jup-accent">
-          <span class="w-2 h-2 rounded-full bg-jup-accent animate-pulse"></span> LIVE 500MS
-        </span>
-        <span>•</span>
-        <span>Jupiter Zero-Gap</span>
-      </div>
-    </div>
+        <!-- Automation status chip -->
+        <button id="autoBuyChip" class="auto-chip is-off" onclick="openDrawer('wallet')" title="Status automasi engine — klik untuk atur">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.9 4.9l2.8 2.8m8.6 8.6 2.8 2.8M2 12h4m12 0h4M4.9 19.1l2.8-2.8m8.6-8.6 2.8-2.8"/></svg>
+          AUTO <span id="autoBuyChipState">OFF</span>
+        </button>
 
-    <!-- Right Header Controls -->
-    <div class="flex items-center gap-3">
-      <!-- Quick CA Checker Search Bar -->
-      <div class="flex items-center gap-2 bg-jup-surface px-3 py-1.5 rounded-lg border border-jup-border">
-        <i data-lucide="search" class="w-3.5 h-3.5 text-jup-textMuted"></i>
-        <input type="text" id="headerCaInput" placeholder="Cek CA Token Solana..." onkeydown="if(event.key==='Enter') quickCheckCa()" class="bg-transparent text-xs mono text-white placeholder-jup-textMuted outline-none w-48">
-        <button onclick="quickCheckCa()" class="text-[10px] mono px-2 py-0.5 rounded bg-jup-accent text-black font-bold hover:bg-jup-accentHover transition-colors">
-          Cek
+        <!-- CA checker -->
+        <div class="search">
+          <svg class="icon icon-sm" style="color:var(--text-4)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="headerCaInput" placeholder="Cek CA token Solana..." spellcheck="false" autocomplete="off" aria-label="Cek contract address">
+          <span class="kbd">/</span>
+          <button onclick="quickCheckCa()" aria-label="Periksa token">Cek</button>
+        </div>
+
+        <!-- Sandbox stats -->
+        <div class="hstat" title="Ringkasan akun paper trading">
+          <div class="hstat-item"><span class="lbl">SALDO</span><b id="statBalance">—</b></div>
+          <div class="hstat-item"><span class="lbl">PNL</span><b id="statPnl">—</b></div>
+          <div class="hstat-item"><span class="lbl">WIN</span><b id="statWinRate">—</b></div>
+        </div>
+
+        <button class="wallet-badge" onclick="openDrawer('wallet')" aria-label="Buka detail wallet">
+          <span class="dot"></span>
+          <span id="headerWalletPreview">Wallet</span>
+        </button>
+
+        <button class="icon-btn" onclick="toggleDrawer()" aria-label="Buka menu engine" title="Menu engine (Smart Money, Recap, Wallet)">
+          <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
+    </header>
 
-      <!-- Fast Stats Widget -->
-      <div class="flex items-center gap-2.5 bg-jup-surface px-3.5 py-1.5 rounded-lg border border-jup-border text-xs mono">
-        <span class="text-jup-textMuted text-[11px]">Sandbox:</span>
-        <b id="statBalance" class="text-white font-semibold">0.1213 SOL</b>
-        <span class="text-jup-border">|</span>
-        <span class="text-jup-textMuted text-[11px]">PnL:</span>
-        <b id="statPnl" class="text-jup-green font-semibold">+0.0213 SOL</b>
-        <span class="text-jup-border">|</span>
-        <span class="text-jup-textMuted text-[11px]">Win:</span>
-        <b id="statWinRate" class="text-blue-400 font-semibold">0.0%</b>
-      </div>
-
-      <!-- Quick Wallet Badge -->
-      <div onclick="openDrawer('wallet')" class="flex items-center gap-2 bg-jup-surface hover:bg-jup-hover cursor-pointer px-3 py-1.5 rounded-lg border border-jup-border transition-colors text-xs mono">
-        <div class="w-2 h-2 rounded-full bg-jup-green"></div>
-        <span id="headerWalletPreview" class="text-slate-300 font-semibold">Er4q...LH3rM</span>
-      </div>
-
-      <!-- GARIS 3 (HAMBURGER DRAWER TRIGGER) -->
-      <button onclick="toggleDrawer()" class="p-2 rounded-lg bg-jup-surface hover:bg-jup-hover border border-jup-border text-jup-textMuted hover:text-white transition-colors flex items-center justify-center" title="Buka Menu Engine">
-        <i data-lucide="menu" class="w-5 h-5"></i>
-      </button>
-    </div>
-  </header>
-
-  <!-- ==================== MAIN WORKSPACE ==================== -->
-  <main class="flex-1 flex overflow-hidden">
-    
-    <!-- LEFT PANE: LIVE SCREENER TOKENS (QUALIFYING RADAR) -->
-    <section class="flex-1 flex flex-col border-r border-jup-border/80 bg-[#0A0E17]">
-      <div class="h-11 bg-jup-surface/80 border-b border-jup-border/70 px-6 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2.5">
-          <i data-lucide="radar" class="w-4 h-4 text-jup-cyan"></i>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Alpha Screener Radar</span>
-          <span id="tokenBadge" class="text-[11px] mono px-2 py-0.5 rounded-lg bg-jup-bg border border-jup-border text-jup-accent font-semibold">0 Tokens</span>
+    <!-- ==================== KPI STRIP ==================== -->
+    <section class="kpi-strip" aria-label="Statistik portofolio">
+      <div class="kpi kpi-accent-cyan">
+        <div class="kpi-top">
+          <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Saldo Sandbox</span>
         </div>
-        <span class="text-[11px] text-jup-textMuted mono">Klik kartu koin untuk membuka Chart Real-Time</span>
+        <div class="kpi-value"><span id="kpiBalance">—</span><span class="unit">SOL</span></div>
+        <div class="kpi-foot" id="kpiBalanceSub">Modal awal 0.1 SOL</div>
       </div>
 
-      <div id="signalsList" class="flex-1 overflow-y-auto p-4 space-y-2.5">
-        <div class="text-center py-24 text-xs text-jup-textMuted mono">Memuat feed radar real-time...</div>
+      <div class="kpi kpi-accent-green">
+        <div class="kpi-top">
+          <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M17 7H8m9 0v9"/></svg> Realized PnL</span>
+        </div>
+        <div class="kpi-value"><span id="kpiPnl">—</span><span class="unit">SOL</span></div>
+        <div class="kpi-foot" id="kpiPnlSub">Belum ada trade selesai</div>
+      </div>
+
+      <div class="kpi kpi-accent-blue">
+        <div class="kpi-top">
+          <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Win Rate</span>
+        </div>
+        <div class="kpi-value"><span id="kpiWinRate">—</span></div>
+        <div class="wr-meter" aria-hidden="true"><i id="kpiWinBar" style="width:0%"></i></div>
+      </div>
+
+      <div class="kpi kpi-accent-lime">
+        <div class="kpi-top">
+          <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Aktivitas Engine</span>
+        </div>
+        <div class="kpi-value"><span id="kpiActivity">—</span></div>
+        <div class="kpi-foot" id="kpiActivitySub">Memuat data engine...</div>
       </div>
     </section>
 
-    <!-- RIGHT PANE: DEMO LIVE ACTIVE POSITIONS -->
-    <section class="w-[490px] flex flex-col bg-[#0A0E17] shrink-0">
-      <div class="h-11 bg-jup-surface/80 border-b border-jup-border/70 px-6 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2.5">
-          <i data-lucide="trending-up" class="w-4 h-4 text-jup-accent"></i>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Demo Live Execution</span>
-          <span id="posBadge" class="text-[11px] mono px-2 py-0.5 rounded-lg bg-jup-accentDark border border-jup-accent/40 text-jup-accent font-bold">0 Active</span>
-        </div>
-        <span class="text-[11px] text-jup-textMuted mono">Jupiter Ultra Zero-Gap</span>
-      </div>
+    <!-- ==================== MAIN ==================== -->
+    <main class="main">
 
-      <div class="flex-1 overflow-y-auto p-4 space-y-3">
-        <div class="flex items-center justify-between px-1">
-          <span class="text-xs font-bold text-jup-textMuted uppercase tracking-wider">Floating Position (500ms Tick)</span>
-          <button onclick="openDrawer('history')" class="text-[11px] text-jup-accent hover:underline mono flex items-center gap-1">
-            Buka Riwayat <i data-lucide="chevron-right" class="w-3 h-3"></i>
+      <!-- RADAR -->
+      <section class="panel panel-radar" aria-label="Alpha screener radar">
+        <div class="panel-head">
+          <div class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62a10 10 0 1 0 19.02-1.27"/><path d="M16.24 7.76a6 6 0 1 0-8.01 8.91"/><path d="M12 18h.01"/><path d="M17.99 11.66a6 6 0 0 1-2.22 4.75"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></svg>
+            Alpha Screener Radar
+            <span class="chip" id="tokenBadge">0 token</span>
+          </div>
+          <span class="hint">Klik kartu untuk buka chart live</span>
+        </div>
+
+        <div class="toolbar">
+          <div class="segmented" id="signalFilter" role="tablist" aria-label="Filter sinyal">
+            <button data-filter="OPEN" class="active">Aktif</button>
+            <button data-filter="ALL">Semua</button>
+            <button data-filter="CLOSED">Tertutup</button>
+          </div>
+          <select class="sort-select" id="signalSort" aria-label="Urutkan sinyal">
+            <option value="time">⏱ Terbaru</option>
+            <option value="multiplier">🚀 Multiplikasi</option>
+            <option value="score">⭐ Skor</option>
+          </select>
+        </div>
+
+        <div id="signalsList" class="panel-body" aria-live="polite">
+          <div class="skeleton sig"></div>
+          <div class="skeleton sig"></div>
+          <div class="skeleton sig"></div>
+          <div class="skeleton sig"></div>
+        </div>
+      </section>
+
+      <!-- POSITIONS -->
+      <section class="panel panel-side" aria-label="Eksekusi paper trading">
+        <div class="side-tabs" role="tablist">
+          <button class="side-tab active" id="sideTabOpen" data-tab="open" role="tab">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Posisi Aktif <span class="count" id="posBadge">0</span>
+          </button>
+          <button class="side-tab" id="sideTabHistory" data-tab="history" role="tab">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            Riwayat <span class="count" id="histBadge">0</span>
           </button>
         </div>
-        <div id="activePosList" class="space-y-2.5">
-          <div class="p-8 rounded-xl border border-dashed border-jup-border text-center text-xs text-jup-textMuted mono">
-            Tidak ada posisi aktif saat ini.<br>Modal sandbox siap 100% untuk entry.
-          </div>
+        <div id="sideTabContentOpen" class="panel-body" role="tabpanel">
+          <div class="skeleton pos"></div>
+          <div class="skeleton pos"></div>
         </div>
+        <div id="sideTabContentHistory" class="panel-body hidden" role="tabpanel"></div>
+      </section>
+
+    </main>
+
+    <!-- ==================== STATUS BAR (FOOTER) ==================== -->
+    <footer class="statusbar" aria-label="Status jaringan dan engine">
+      <div class="sb-brand">
+        <img src="/logo.svg" alt="" width="15" height="15">
+        <span>ScreenerNantiAja</span>
+        <span class="sb-sep">·</span>
+        <span class="sb-dim">Ponyin v5.0</span>
       </div>
-    </section>
+      <div class="sb-metrics">
+        <span class="sb-item" id="sbSol" title="Harga SOL live (DexScreener, cache 30s)">
+          <span class="sb-k">SOL</span> <b class="mono">—</b>
+        </span>
+        <span class="sb-item" id="sbGas" title="Biaya jaringan: base fee + priority fee engine">
+          <span class="sb-k">GAS</span> <b class="mono">—</b>
+        </span>
+        <span class="sb-item" id="sbEngine" title="Kecepatan engine: sync DB terakhir & rata-rata">
+          <span class="sb-k">ENGINE</span> <b class="mono">—</b>
+        </span>
+        <span class="sb-item" id="sbWs" title="Klien WebSocket terhubung & umur bridge">
+          <span class="sb-k">WS</span> <b class="mono">—</b>
+        </span>
+      </div>
+      <div class="sb-right sb-dim">Data live dari engine via Tailscale</div>
+    </footer>
+  </div>
 
-  </main>
+  <!-- ==================== DRAWER ==================== -->
+  <div id="drawerBackdrop" class="overlay hidden" onclick="closeDrawer()"></div>
 
-  <!-- ==================== SIDE DRAWER (GARIS 3 SLIDE-OVER) ==================== -->
-  <div id="drawerBackdrop" onclick="closeDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity duration-300 opacity-0"></div>
-  
-  <aside id="sideDrawer" class="fixed top-0 right-0 w-[560px] h-full bg-jup-bg border-l border-jup-border z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
-    
-    <!-- Drawer Header Menu Tabs -->
-    <div class="h-16 bg-jup-surface border-b border-jup-border px-6 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-1.5 overflow-x-auto">
-        <button id="btnTabHistory" onclick="switchDrawerTab('history')" class="px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-accent text-black font-bold shrink-0">
-          <i data-lucide="history" class="w-3.5 h-3.5"></i> Riwayat (<span id="drawerHistoryCount">0</span>)
+  <aside id="sideDrawer" class="drawer" aria-label="Menu engine">
+    <div class="drawer-head">
+      <div class="drawer-tabs">
+        <button id="btnTabWallets" class="drawer-tab active" onclick="switchDrawerTab('wallets')">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          Smart Money
         </button>
-        <button id="btnTabWallets" onclick="switchDrawerTab('wallets')" class="px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-surface hover:bg-jup-hover text-slate-300 shrink-0">
-          <i data-lucide="award" class="w-3.5 h-3.5"></i> Smart Money
+        <button id="btnTabRecap" class="drawer-tab" onclick="switchDrawerTab('recap')">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          Evaluasi &amp; Recap
         </button>
-        <button id="btnTabRecap" onclick="switchDrawerTab('recap')" class="px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-surface hover:bg-jup-hover text-slate-300 shrink-0">
-          <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Evaluasi & Recap
-        </button>
-        <button id="btnTabWallet" onclick="switchDrawerTab('wallet')" class="px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-surface hover:bg-jup-hover text-slate-300 shrink-0">
-          <i data-lucide="wallet" class="w-3.5 h-3.5"></i> Akun / Wallet
+        <button id="btnTabWallet" class="drawer-tab" onclick="switchDrawerTab('wallet')">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+          Akun &amp; Wallet
         </button>
       </div>
-
-      <button onclick="closeDrawer()" class="p-2 rounded-lg bg-jup-surface hover:bg-jup-hover text-jup-textMuted hover:text-white transition-colors ml-2">
-        <i data-lucide="x" class="w-5 h-5"></i>
+      <button class="icon-btn" onclick="closeDrawer()" aria-label="Tutup menu">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
 
-    <!-- DRAWER TAB 1: RIWAYAT TRADING -->
-    <div id="drawerTabHistory" class="flex-1 overflow-y-auto p-6 space-y-4">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Semua Transaksi Tertutup</span>
-        <span class="text-xs text-jup-textMuted mono">Terekam SQLite WAL</span>
-      </div>
-      <div id="drawerHistoryList" class="space-y-2.5">
-        <div class="text-center py-20 text-xs text-jup-textMuted mono">Memuat riwayat trade...</div>
-      </div>
-    </div>
+    <div class="drawer-body">
 
-    <!-- DRAWER TAB 2: SMART MONEY RADAR LEADERBOARD -->
-    <div id="drawerTabWallets" class="flex-1 overflow-y-auto p-6 space-y-4 hidden">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-200 block">Top Smart Money Radar</span>
-          <span class="text-[11px] text-jup-textMuted">Wallet whale berakurasi tinggi yang dipantau engine.</span>
+      <!-- SMART MONEY -->
+      <div id="drawerTabWallets" class="drawer-pane">
+        <div class="drawer-section-title">
+          <span>Top Smart Money Radar</span>
+          <span class="sub" id="smCountBadge">memuat...</span>
         </div>
-        <span id="smCountBadge" class="text-xs mono text-jup-accent font-semibold">231 Wallets</span>
-      </div>
-      <div id="drawerSmartWalletsList" class="space-y-2">
-        <div class="text-center py-20 text-xs text-jup-textMuted mono">Memuat daftar smart wallets...</div>
-      </div>
-    </div>
-
-    <!-- DRAWER TAB: EVALUASI & RECAP PONYIN (FITUR ENGINE RESMI) -->
-    <div id="drawerTabRecap" class="flex-1 overflow-y-auto p-6 space-y-4 hidden">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 block">Laporan Kinerja & Rekapitulasi</span>
-        <span class="text-[11px] text-jup-accent mono font-semibold">Ponyin Quant</span>
+        <p class="kpi-foot" style="font-size:11px">Wallet whale dengan akurasi tertinggi 7 hari terakhir, dipantau langsung oleh engine.</p>
+        <div id="drawerSmartWalletsList" style="display:flex;flex-direction:column;gap:8px">
+          <div class="skeleton pos"></div>
+          <div class="skeleton pos"></div>
+          <div class="skeleton pos"></div>
+        </div>
       </div>
 
-      <!-- Timeframe selector buttons -->
-      <div class="grid grid-cols-4 gap-2 bg-jup-surface p-1 rounded-lg border border-jup-border text-xs mono">
-        <button onclick="loadRecap('daily')" id="recapDailyBtn" class="py-1.5 rounded-md bg-jup-accent text-black font-bold text-center">24 Jam</button>
-        <button onclick="loadRecap('weekly')" id="recapWeeklyBtn" class="py-1.5 rounded-md text-slate-300 hover:text-white text-center">7 Hari</button>
-        <button onclick="loadRecap('monthly')" id="recapMonthlyBtn" class="py-1.5 rounded-md text-slate-300 hover:text-white text-center">30 Hari</button>
-        <button onclick="loadRecap('all')" id="recapAllBtn" class="py-1.5 rounded-md text-slate-300 hover:text-white text-center">All-Time</button>
+      <!-- RECAP -->
+      <div id="drawerTabRecap" class="drawer-pane hidden">
+        <div class="drawer-section-title">
+          <span>Laporan Kinerja &amp; Rekapitulasi</span>
+          <span class="sub">Ponyin Quant v5</span>
+        </div>
+        <div class="recap-tabs" id="recapTabs">
+          <button data-tf="daily" class="active">24 Jam</button>
+          <button data-tf="weekly">7 Hari</button>
+          <button data-tf="monthly">30 Hari</button>
+          <button data-tf="all">All-Time</button>
+        </div>
+        <div id="recapContentBox" class="recap-box">Memuat analisis rekapitulasi engine...</div>
       </div>
 
-      <!-- Recap Box -->
-      <div id="recapContentBox" class="p-4 rounded-xl bg-jup-surface border border-jup-border text-xs mono space-y-2 leading-relaxed">
-        <div class="text-center py-12 text-slate-500">Memuat analisis rekapitulasi engine...</div>
-      </div>
-    </div>
+      <!-- WALLET -->
+      <div id="drawerTabWallet" class="drawer-pane hidden">
+        <div class="wallet-card">
+          <div class="wallet-id-row">
+            <div style="display:flex;align-items:center;gap:11px">
+              <div style="width:40px;height:40px;border-radius:12px;background:var(--lime-dim);border:1px solid var(--lime-border);display:grid;place-items:center;color:var(--lime)">
+                <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:800">Solana Trading Wallet</div>
+                <div style="font-size:11px;color:var(--text-3)">Wallet engine aktif on-chain</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <span class="field-label" style="margin:0 0 2px">Saldo SOL</span>
+              <span id="drawerWalletSol" class="mono" style="font-size:15px;font-weight:800;color:var(--green)">—</span>
+            </div>
+          </div>
 
-    <!-- DRAWER TAB 3: AKUN & WALLET SETTINGS -->
-    <div id="drawerTabWallet" class="flex-1 overflow-y-auto p-6 space-y-6 hidden">
-      <div class="p-5 rounded-xl bg-jup-surface border border-jup-border space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="p-2.5 rounded-lg bg-jup-accentDark border border-jup-accent/30 text-jup-accent">
-              <i data-lucide="wallet-cards" class="w-5 h-5"></i>
+          <div>
+            <span class="field-label">Deposit Address (Public Key)</span>
+            <div style="display:flex;gap:7px;align-items:center">
+              <span id="drawerWalletPubkey" class="mono" style="font-size:11.5px;color:var(--text-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Memuat...</span>
+              <button class="btn" onclick="copyCA(document.getElementById('drawerWalletPubkey').innerText)">
+                <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border-1);padding-top:13px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div>
+              <span style="font-size:12px;font-weight:700;display:block">Export Private Key</span>
+              <span style="font-size:10.5px;color:var(--text-3)">Untuk impor ke Phantom / Solflare.</span>
+            </div>
+            <button class="btn btn-danger" onclick="revealPrivateKey()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+              Export
+            </button>
+          </div>
+
+          <div id="pkBox" class="hidden" style="display:flex;flex-direction:column;gap:9px">
+            <div class="warn-banner">
+              <svg class="icon" style="flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4m0 4h.01"/></svg>
+              <span>Jangan bagikan private key ke siapa pun. Siapa pun yang memilikinya menguasai penuh saldo wallet ini.</span>
+            </div>
+            <div class="pk-row">
+              <input type="password" id="pkValue" readonly class="input" aria-label="Private key">
+              <button class="btn" onclick="togglePkVisibility()" id="pkToggle">Lihat</button>
+              <button class="btn" onclick="copyCA(document.getElementById('pkValue').value)">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="wallet-card">
+          <div style="font-size:13px;font-weight:800">Automasi &amp; Eksekusi Engine</div>
+
+          <div class="auto-card-status">
+            <div class="auto-status-item">
+              <span class="auto-dot on"></span> Radar scanner 24/7 — <b>AKTIF</b>
+            </div>
+            <div class="auto-status-item">
+              <span class="auto-dot on"></span> Paper exit loop (TP/SL otomatis) — <b>AKTIF</b>
+            </div>
+            <div class="auto-status-item">
+              <span class="auto-dot" id="autoDotReal"></span> Auto-buy saldo riil — <b id="autoStateReal">MATI</b>
+            </div>
+          </div>
+
+          <label class="switch-row" for="autoBuySwitch">
+            <div>
+              <span style="font-size:12px;font-weight:700;display:block">Auto-Buy On-Chain</span>
+              <span style="font-size:10.5px;color:var(--text-3)">Engine membeli token otomatis saat sinyal lolos, memakai saldo asli wallet.</span>
+            </div>
+            <span class="switch">
+              <input type="checkbox" id="autoBuySwitch" role="switch">
+              <i></i>
+            </span>
+          </label>
+
+          <div class="settings-grid">
+            <div>
+              <label class="field-label" for="settingBuySol">Default Buy (SOL)</label>
+              <input type="number" step="0.01" min="0" id="settingBuySol" class="input">
             </div>
             <div>
-              <h3 class="text-sm font-bold text-white">Solana Trading Wallet</h3>
-              <p class="text-xs text-jup-textMuted">Wallet engine aktif on-chain.</p>
+              <label class="field-label" for="settingSlippage">Slippage (%)</label>
+              <input type="number" step="1" min="0" max="100" id="settingSlippage" class="input">
             </div>
           </div>
-          <div class="text-right">
-            <span class="text-[11px] text-jup-textMuted block">Saldo SOL Riil</span>
-            <span id="drawerWalletSol" class="text-base font-bold mono text-jup-green">0.0000 SOL</span>
-          </div>
-        </div>
 
-        <div class="p-3.5 rounded-lg bg-jup-bg border border-jup-border space-y-1">
-          <span class="text-[10px] text-jup-textMuted uppercase font-semibold">Deposit Address (Public Key)</span>
-          <div class="flex items-center justify-between gap-3">
-            <span id="drawerWalletPubkey" class="text-xs mono text-slate-200 truncate select-all">Memuat...</span>
-            <button onclick="copyCA(document.getElementById('drawerWalletPubkey').innerText)" class="px-2.5 py-1 rounded-md bg-jup-surface hover:bg-jup-hover text-xs mono text-slate-200 flex items-center gap-1 transition-colors">
-              <i data-lucide="copy" class="w-3 h-3"></i> Copy
+          <div id="autoBuyWarning" class="warn-banner hidden">
+            <svg class="icon" style="flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4m0 4h.01"/></svg>
+            <span><b>Mode riil aktif.</b> Engine akan membeli token secara otomatis dengan saldo asli di wallet kamu. Pastikan parameter sudah sesuai.</span>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn btn-solid" onclick="saveWalletSettings()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              Simpan Pengaturan
             </button>
           </div>
         </div>
 
-        <!-- Export Private Key Feature -->
-        <div class="pt-2 border-t border-jup-border flex items-center justify-between">
+        <div class="wallet-card">
+          <div style="font-size:13px;font-weight:800">Import Wallet Sendiri</div>
+          <div class="warn-banner">
+            <svg class="icon" style="flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4m0 4h.01"/></svg>
+            <span>Import akan <b>menggantikan</b> wallet engine saat ini. Pindahkan dulu sisa saldo dari wallet lama sebelum import — private key lama tidak bisa dipulihkan dari dashboard.</span>
+          </div>
           <div>
-            <span class="text-xs font-semibold text-white block">Export Private Key</span>
-            <span class="text-[11px] text-jup-textMuted">Ekspor key Base58 untuk diimpor ke Phantom/Solflare.</span>
+            <label class="field-label" for="importPkInput">Private Key (Base58 / Hex)</label>
+            <input type="password" id="importPkInput" class="input" placeholder="Tempel private key di sini..." autocomplete="off" spellcheck="false">
           </div>
-          <button onclick="revealPrivateKey()" class="px-3 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 text-xs mono font-semibold flex items-center gap-1.5 transition-colors">
-            <i data-lucide="key" class="w-3.5 h-3.5"></i> Export
-          </button>
-        </div>
-
-        <div id="pkBox" class="hidden p-3 rounded-lg bg-red-950/30 border border-red-800/80 space-y-2">
-          <div class="flex items-center justify-between text-xs text-red-400 font-semibold">
-            <span>⚠️ JANGAN DIBAGIKAN KE ORANG LAIN</span>
-            <button onclick="document.getElementById('pkBox').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <input type="password" id="pkValue" readonly class="bg-jup-bg text-xs mono text-red-300 border border-red-900/60 rounded px-2.5 py-1.5 w-full select-all">
-            <button onclick="togglePkVisibility()" class="px-2 py-1.5 rounded bg-jup-surface text-xs text-slate-300 shrink-0">Lihat</button>
-            <button onclick="copyCA(document.getElementById('pkValue').value)" class="px-2 py-1.5 rounded bg-jup-surface text-xs text-slate-300 shrink-0">Copy</button>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn" onclick="document.getElementById('importPkInput').value=''">Bersihkan</button>
+            <button class="btn btn-danger" onclick="importWallet()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+              Import Wallet
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Execution Parameters Settings -->
-      <div class="p-5 rounded-xl bg-jup-surface border border-jup-border space-y-4">
-        <h3 class="text-sm font-bold text-white">Parameter Eksekusi Engine</h3>
-        <div class="space-y-3.5">
-          <div class="space-y-1">
-            <label class="text-xs text-jup-textMuted">Default Buy Amount (SOL)</label>
-            <input type="number" id="settingBuySol" step="0.01" class="w-full bg-jup-bg border border-jup-border rounded-lg px-3 py-2 text-xs mono text-white focus:border-jup-accent outline-none">
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs text-jup-textMuted">Slippage Tolerance (%)</label>
-            <input type="number" id="settingSlippage" step="1" class="w-full bg-jup-bg border border-jup-border rounded-lg px-3 py-2 text-xs mono text-white focus:border-jup-accent outline-none">
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs text-jup-textMuted">Mode Eksekusi Auto Buy</label>
-            <select id="settingAutoBuy" class="w-full bg-jup-bg border border-jup-border rounded-lg px-3 py-2 text-xs mono text-white focus:border-jup-accent outline-none">
-              <option value="0">OFF (Sandbox / Paper Only - Aman)</option>
-              <option value="1">ON (Eksekusi Saldo Riil di Wallet)</option>
-            </select>
-          </div>
-        </div>
-        <div class="pt-2 flex justify-end">
-          <button onclick="saveWalletSettings()" class="px-4 py-2 rounded-lg bg-jup-accent hover:bg-jup-accentHover text-black font-bold text-xs mono flex items-center gap-1.5 transition-colors">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan Pengaturan
-          </button>
-        </div>
-      </div>
     </div>
-
   </aside>
 
-  <!-- ==================== MODAL: EMBEDDED LIVE REAL-TIME CHART ==================== -->
-  <div id="chartModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex flex-col p-6 items-center justify-center">
-    <div class="bg-jup-surface border border-jup-border rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="h-14 bg-[#0E141E] border-b border-jup-border px-6 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-3">
-          <span class="w-2 h-2 rounded-full bg-jup-accent animate-pulse"></span>
-          <span id="modalTokenSymbol" class="font-extrabold text-base text-white mono">$TOKEN</span>
-          <span id="modalTokenName" class="text-xs text-jup-textMuted">Token Name</span>
-          <span id="modalTokenPrice" class="text-sm mono font-bold text-jup-green ml-2">$0.000000</span>
+  <!-- ==================== CHART MODAL ==================== -->
+  <div id="chartModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeChartModal()">
+    <div class="chart-modal" role="dialog" aria-modal="true" aria-label="Chart live token">
+      <div class="chart-modal-head">
+        <div class="chart-modal-title">
+          <span class="live-dot"></span>
+          <span id="modalTokenSymbol" class="mono" style="font-size:15px;font-weight:800">$TOKEN</span>
+          <span id="modalTokenName" style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px"></span>
+          <span id="modalTokenPrice" class="mono" style="font-size:13px;font-weight:700;color:var(--green)">$0.00</span>
         </div>
-        <div class="flex items-center gap-3">
-          <button onclick="copyCA(currentModalCa)" class="px-3 py-1.5 rounded-lg bg-jup-surface hover:bg-jup-hover text-xs text-slate-300 mono flex items-center gap-1.5 transition-colors border border-jup-border">
-            <i data-lucide="copy" class="w-3 h-3"></i> Copy CA
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-solid" onclick="openTradeModal({action:'buy', ca:currentModalCa, symbol:document.getElementById('modalTokenSymbol').textContent.replace('$',''), price:''})">Beli</button>
+          <button class="btn" onclick="copyCA(currentModalCa)">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            Copy CA
           </button>
-          <a id="modalExternalLink" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-jup-accentDark hover:bg-jup-accent/20 text-jup-accent text-xs mono font-semibold border border-jup-accent/30 transition-colors">
-            DexScreener ↗
+          <a id="modalExternalLink" href="#" target="_blank" rel="noopener" class="btn btn-lime" style="text-decoration:none">
+            DexScreener
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
           </a>
-          <button onclick="closeChartModal()" class="p-1.5 rounded-lg bg-jup-surface hover:bg-jup-hover text-jup-textMuted hover:text-white transition-colors">
-            <i data-lucide="x" class="w-5 h-5"></i>
+          <button class="icon-btn" onclick="closeChartModal()" aria-label="Tutup chart">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
       </div>
-
-      <div class="flex-1 bg-black relative">
-        <iframe id="chartIframe" src="" class="w-full h-full border-0" allow="clipboard-write"></iframe>
+      <div class="chart-modal-body">
+        <iframe id="chartIframe" src="" allow="clipboard-write" title="Chart token"></iframe>
       </div>
     </div>
   </div>
 
-  <!-- ==================== TOAST NOTIFICATION ==================== -->
-  <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-150 pointer-events-none bg-jup-surface border border-jup-accent/60 text-white px-4 py-2.5 rounded-xl text-xs mono shadow-2xl flex items-center gap-2.5 z-50">
-    <i data-lucide="check" class="w-4 h-4 text-jup-accent"></i>
-    <span id="toastText">Berhasil!</span>
+  <!-- ==================== TRADE TICKET MODAL ==================== -->
+  <div id="tradeModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeTradeModal()">
+    <div class="trade-modal" role="dialog" aria-modal="true" aria-label="Trade ticket">
+      <div class="trade-head">
+        <div class="chart-modal-title">
+          <span id="tradeActionIcon" class="trade-action-icon buy"></span>
+          <div>
+            <div id="tradeTitle" class="mono" style="font-size:14px;font-weight:800">Beli $TOKEN</div>
+            <div id="tradeSubtitle" style="font-size:10.5px;color:var(--text-3)">—</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="closeTradeModal()" aria-label="Tutup trade">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="trade-body">
+        <!-- Mode selector (buy only) -->
+        <div id="tradeModeWrap">
+          <span class="field-label">Mode Eksekusi</span>
+          <div class="segmented" id="tradeModeSeg">
+            <button data-mode="paper" class="active">Paper — Sandbox</button>
+            <button data-mode="live" id="tradeModeLiveBtn">Live — Saldo Riil</button>
+          </div>
+          <div id="tradeModeHint" class="kpi-foot" style="font-size:10.5px;margin-top:6px">Order virtual memakai saldo sandbox. Tidak ada dana riil yang tersentuh.</div>
+        </div>
+
+        <!-- Amount (buy) -->
+        <div id="tradeAmountWrap">
+          <span class="field-label">Jumlah Beli (SOL)</span>
+          <div class="amount-chips" id="tradeAmountChips">
+            <button data-amt="0.05">0.05</button>
+            <button data-amt="0.1" class="active">0.1</button>
+            <button data-amt="0.25">0.25</button>
+            <button data-amt="0.5">0.5</button>
+          </div>
+          <input type="number" id="tradeAmountInput" class="input" step="0.01" min="0.01" max="5" value="0.1">
+        </div>
+
+        <!-- Percent (sell) -->
+        <div id="tradePercentWrap" class="hidden">
+          <span class="field-label">Porsi Jual</span>
+          <div class="amount-chips" id="tradePercentChips">
+            <button data-pct="25">25%</button>
+            <button data-pct="50">50%</button>
+            <button data-pct="75">75%</button>
+            <button data-pct="100" class="active">100%</button>
+          </div>
+          <div id="tradeSellInfo" class="kpi-foot" style="font-size:11px;margin-top:8px"></div>
+        </div>
+
+        <!-- Preview box (buy) -->
+        <div id="tradePreview" class="trade-preview">
+          <div class="tp-row"><span>Estimasi token diterima</span><b class="mono" id="tpTokens">—</b></div>
+          <div class="tp-row"><span>Price impact</span><b class="mono" id="tpImpact">—</b></div>
+          <div class="tp-row"><span>Slippage maks</span><b class="mono" id="tpSlippage">—</b></div>
+        </div>
+
+        <!-- Live warning -->
+        <div id="tradeLiveWarn" class="warn-banner hidden">
+          <svg class="icon" style="flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4m0 4h.01"/></svg>
+          <span><b>Eksekusi RIIL.</b> Swap on-chain akan dikirim dari wallet engine memakai dana asli. Tidak ada jalan kembali setelah tx dikonfirmasi.</span>
+        </div>
+
+        <button id="tradeConfirmBtn" class="btn btn-solid" style="width:100%;padding:11px" onclick="submitTrade()">Konfirmasi Beli — 0.1 SOL</button>
+      </div>
+    </div>
   </div>
 
-  <!-- ==================== LOGIC SCRIPT ==================== -->
-  <script>
-    lucide.createIcons();
+  <!-- ==================== TOASTS ==================== -->
+  <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-    let currentModalCa = '';
-    const lastSeenPrices = {};
-
-    function toggleDrawer() {
-      const drawer = document.getElementById('sideDrawer');
-      const isClosed = drawer.classList.contains('translate-x-full');
-      if (isClosed) openDrawer('history');
-      else closeDrawer();
-    }
-
-    function openDrawer(tab) {
-      const backdrop = document.getElementById('drawerBackdrop');
-      const drawer = document.getElementById('sideDrawer');
-      backdrop.classList.remove('hidden');
-      setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
-      drawer.classList.remove('translate-x-full');
-      switchDrawerTab(tab || 'history');
-    }
-
-    function closeDrawer() {
-      const backdrop = document.getElementById('drawerBackdrop');
-      const drawer = document.getElementById('sideDrawer');
-      backdrop.classList.add('opacity-0');
-      drawer.classList.add('translate-x-full');
-      setTimeout(() => backdrop.classList.add('hidden'), 300);
-    }
-
-    function switchDrawerTab(tab) {
-      const tabs = ['History', 'Wallets', 'Recap', 'Wallet'];
-      tabs.forEach(t => {
-        const btn = document.getElementById(`btnTab${t}`);
-        const content = document.getElementById(`drawerTab${t}`);
-        if (t.toLowerCase() === tab.toLowerCase()) {
-          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-accent text-black font-bold shrink-0';
-          content.classList.remove('hidden');
-        } else {
-          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold mono flex items-center gap-1.5 transition-colors bg-jup-surface hover:bg-jup-hover text-slate-300 shrink-0';
-          content.classList.add('hidden');
-        }
-      });
-
-      if (tab === 'wallet') loadWalletData();
-      if (tab === 'wallets') loadSmartWallets();
-      if (tab === 'recap') loadRecap('daily');
-      lucide.createIcons();
-    }
-
-    async function loadRecap(timeframe) {
-      ['daily', 'weekly', 'monthly', 'all'].forEach(t => {
-        const btn = document.getElementById(`recap${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
-        if (btn) {
-          if (t === timeframe) {
-            btn.className = 'py-1.5 rounded-md bg-jup-accent text-black font-bold text-center';
-          } else {
-            btn.className = 'py-1.5 rounded-md text-slate-300 hover:text-white text-center';
-          }
-        }
-      });
-
-      const box = document.getElementById('recapContentBox');
-      box.innerHTML = '<div class=\"text-center py-8 text-slate-400\">Menghitung rekapitulasi data...</div>';
-
-      try {
-        const res = await fetch(`/api/recap?timeframe=${timeframe}`);
-        const data = await res.json();
-        if (data.success && data.recap_html) {
-          box.innerHTML = data.recap_html.replace(/\\n/g, '<br>');
-        } else {
-          box.innerHTML = '<div class=\"text-slate-400\">Belum ada data evaluasi.</div>';
-        }
-      } catch (e) {
-        box.innerHTML = `<div class=\"text-red-400\">Error: ${e.message}</div>`;
-      }
-    }
-
-    function showToast(text) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastText').innerText = text;
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 1800);
-    }
-
-    function copyCA(ca) {
-      navigator.clipboard.writeText(ca);
-      showToast(`CA: ${ca.slice(0, 6)}...${ca.slice(-4)} Dicopy!`);
-    }
-
-    function formatUSD(val) {
-      if (!val || val === 0) return '$0';
-      if (val >= 1000000) return '$' + (val / 1000000).toFixed(2) + 'M';
-      if (val >= 1000) return '$' + (val / 1000).toFixed(2) + 'K';
-      return '$' + Math.round(val).toLocaleString();
-    }
-
-    // Quick CA Checker
-    async function quickCheckCa() {
-      const input = document.getElementById('headerCaInput');
-      const ca = input.value.trim();
-      if (!ca) return;
-
-      showToast(`Memeriksa CA: ${ca.slice(0, 6)}...`);
-      try {
-        const res = await fetch(`/api/check_ca?ca=${ca}`);
-        const data = await res.json();
-        if (data.success && data.dex) {
-          openChartModal(ca, data.dex.baseToken?.symbol || 'TOKEN', data.dex.baseToken?.name || '', data.dex.priceUsd);
-          input.value = '';
-        } else {
-          alert('Token tidak ditemukan atau belum aktif likuiditasnya di Solana.');
-        }
-      } catch (e) {
-        alert('Gagal memeriksa CA: ' + e.message);
-      }
-    }
-
-    // Modal Live Chart
-    function openChartModal(ca, symbol, name, priceStr) {
-      currentModalCa = ca;
-      document.getElementById('modalTokenSymbol').innerText = '$' + symbol;
-      document.getElementById('modalTokenName').innerText = name || '';
-      document.getElementById('modalTokenPrice').innerText = priceStr ? '$' + priceStr : '$0.00';
-      document.getElementById('modalExternalLink').href = `https://dexscreener.com/solana/${ca}`;
-      document.getElementById('chartIframe').src = `https://dexscreener.com/solana/${ca}?embed=1&theme=dark&trades=0&info=0`;
-      document.getElementById('chartModal').classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeChartModal() {
-      document.getElementById('chartModal').classList.add('hidden');
-      document.getElementById('chartIframe').src = '';
-    }
-
-    // Smart Wallets List
-    async function loadSmartWallets() {
-      try {
-        const res = await fetch('/api/smart_wallets');
-        const data = await res.json();
-        if (data.success && data.data) {
-          const rows = data.data.map((w, idx) => `
-            <div class="p-3 rounded-lg bg-jup-surface border border-jup-border flex items-center justify-between text-xs mono">
-              <div class="flex items-center gap-2.5">
-                <span class="text-jup-textMuted text-[10px]">#${idx + 1}</span>
-                <div>
-                  <span class="text-slate-200 font-bold block">${w.alias || w.address.slice(0, 6) + '...' + w.address.slice(-4)}</span>
-                  <span class="text-[10px] text-jup-textMuted">${w.category || 'SMART_MONEY'}</span>
-                </div>
-              </div>
-              <div class="text-right">
-                <span class="text-jup-green font-bold block">${(w.win_rate || 0).toFixed(0)}% Win Rate</span>
-                <span class="text-[10px] text-jup-textMuted">PnL: +${(w.total_pnl || 0).toFixed(1)} SOL</span>
-              </div>
-            </div>
-          `).join('');
-          document.getElementById('drawerSmartWalletsList').innerHTML = rows;
-        }
-      } catch (e) {
-        console.error('Error loading smart wallets:', e);
-      }
-    }
-
-    // Wallet API
-    async function loadWalletData() {
-      try {
-        const res = await fetch('/api/wallet');
-        const data = await res.json();
-        if (data.success && data.wallet) {
-          const w = data.wallet;
-          document.getElementById('drawerWalletPubkey').innerText = w.public_key;
-          document.getElementById('headerWalletPreview').innerText = `${w.public_key.slice(0, 4)}...${w.public_key.slice(-4)}`;
-          document.getElementById('drawerWalletSol').innerText = `${parseFloat(w.sol_balance || 0).toFixed(4)} SOL`;
-          document.getElementById('settingBuySol').value = w.default_buy_sol || 0.1;
-          document.getElementById('settingSlippage').value = w.slippage_pct || 15;
-          document.getElementById('settingAutoBuy').value = w.auto_buy_enabled ? "1" : "0";
-        }
-      } catch (e) {
-        console.error('Error loading wallet:', e);
-      }
-    }
-
-    async function revealPrivateKey() {
-      if (!confirm('Apakah kamu yakin ingin menampilkan Private Key wallet trading ini? Simpan dengan aman!')) return;
-      try {
-        const res = await fetch('/api/wallet/export');
-        const data = await res.json();
-        if (data.success && data.private_key_base58) {
-          document.getElementById('pkValue').value = data.private_key_base58;
-          document.getElementById('pkBox').classList.remove('hidden');
-        } else {
-          alert('Gagal: ' + (data.error || 'Unknown error'));
-        }
-      } catch (e) {
-        alert('Gagal mengekspor: ' + e.message);
-      }
-    }
-
-    function togglePkVisibility() {
-      const el = document.getElementById('pkValue');
-      el.type = el.type === 'password' ? 'text' : 'password';
-    }
-
-    async function saveWalletSettings() {
-      try {
-        const payload = {
-          default_buy_sol: parseFloat(document.getElementById('settingBuySol').value),
-          slippage_pct: parseFloat(document.getElementById('settingSlippage').value),
-          auto_buy_enabled: document.getElementById('settingAutoBuy').value === "1"
-        };
-        const res = await fetch('/api/wallet/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Pengaturan Wallet Disimpan!');
-        } else {
-          alert('Gagal: ' + data.error);
-        }
-      } catch (e) {
-        alert('Error: ' + e.message);
-      }
-    }
-
-    function renderSignalCard(sig, quote) {
-      const livePriceStr = quote?.price_usd_str || (sig.current_price ? String(sig.current_price) : '0');
-      const livePriceNum = quote?.price_usd_num || (sig.current_price ? parseFloat(sig.current_price) : 0);
-      const liveMcap = quote?.mcap || sig.current_mcap || sig.entry_mcap || 0;
-      const liq = quote?.liq || sig.liq || 0;
-      const change5m = quote?.change_5m !== undefined ? quote.change_5m : 0;
-      
-      const entryPrice = parseFloat(sig.entry_price || '0');
-      const multiplier = (entryPrice > 0 && livePriceNum > 0) ? (livePriceNum / entryPrice) : (sig.current_multiplier || 1.0);
-      const isUp = multiplier >= 1.0;
-
-      let tickClass = '';
-      if (lastSeenPrices[sig.ca] !== undefined) {
-        if (livePriceNum > lastSeenPrices[sig.ca]) tickClass = 'tick-up';
-        else if (livePriceNum < lastSeenPrices[sig.ca]) tickClass = 'tick-down';
-      }
-      lastSeenPrices[sig.ca] = livePriceNum;
-
-      return `
-        <div class="p-4 rounded-xl jup-card cursor-pointer" onclick="openChartModal('${sig.ca}', '${sig.symbol}', '${sig.name || ''}', '${livePriceStr}')">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2.5">
-              <span class="font-extrabold text-base text-white tracking-wide">$${sig.symbol}</span>
-              <span class="text-xs text-jup-textMuted font-sans">${sig.name || ''}</span>
-              <span class="text-[10px] mono px-2 py-0.5 rounded bg-jup-bg border border-jup-border text-slate-300">${sig.strategy || 'Ponyin Quant'}</span>
-            </div>
-
-            <div class="text-right">
-              <div class="text-sm font-bold mono text-white px-2 py-0.5 rounded ${tickClass}">
-                $${livePriceStr}
-              </div>
-              <div class="text-[11px] mono font-bold ${isUp ? 'text-jup-green' : 'text-jup-red'}">
-                ${multiplier.toFixed(2)}x (${change5m >= 0 ? '+' : ''}${change5m.toFixed(1)}% 5m)
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-4 gap-2 my-2.5 p-2.5 rounded-lg bg-jup-bg border border-jup-border/70 text-xs mono">
-            <div>
-              <span class="text-[10px] text-jup-textMuted block uppercase">Live MC</span>
-              <span class="font-bold text-slate-200">${formatUSD(liveMcap)}</span>
-            </div>
-            <div>
-              <span class="text-[10px] text-jup-textMuted block uppercase">Entry MC</span>
-              <span class="font-semibold text-slate-400">${formatUSD(sig.entry_mcap)}</span>
-            </div>
-            <div>
-              <span class="text-[10px] text-jup-textMuted block uppercase">Liquidity (LP)</span>
-              <span class="font-semibold text-jup-cyan">${formatUSD(liq)}</span>
-            </div>
-            <div>
-              <span class="text-[10px] text-jup-textMuted block uppercase">Smart Money</span>
-              <span class="font-semibold text-jup-accent">${sig.sm_count || 0} SM</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-1" onclick="event.stopPropagation()">
-            <div class="text-[11px] mono text-jup-textMuted">
-              CA: <span class="text-slate-300 font-mono">${sig.ca.slice(0, 6)}...${sig.ca.slice(-4)}</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button onclick="copyCA('${sig.ca}')" class="px-3 py-1.5 rounded-lg bg-jup-surface hover:bg-jup-hover text-slate-200 text-xs mono flex items-center gap-1.5 transition-colors border border-jup-border">
-                <i data-lucide="copy" class="w-3 h-3"></i> Copy CA
-              </button>
-              <button onclick="openChartModal('${sig.ca}', '${sig.symbol}', '${sig.name || ''}', '${livePriceStr}')" class="px-3 py-1.5 rounded-lg bg-jup-accentDark hover:bg-jup-accent/20 text-jup-accent border border-jup-accent/30 text-xs mono font-semibold flex items-center gap-1 transition-colors">
-                Chart Live 📈
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderActiveCard(pos, quote) {
-      const livePriceStr = quote?.price_usd_str || (pos.current_price_usd ? String(pos.current_price_usd) : '0');
-      const livePriceNum = quote?.price_usd_num || (pos.current_price_usd ? parseFloat(pos.current_price_usd) : 0);
-      const liveMcap = quote?.mcap || pos.current_mcap || pos.entry_mcap || 0;
-      
-      const entryPrice = parseFloat(pos.entry_price_usd || '0');
-      const pnlPct = (entryPrice > 0 && livePriceNum > 0) ? (((livePriceNum - entryPrice) / entryPrice) * 100) : 0;
-      const isWin = pnlPct >= 0;
-
-      return `
-        <div class="p-4 rounded-xl jup-card border-jup-accent/40 shadow-lg cursor-pointer" onclick="openChartModal('${pos.token_ca}', '${pos.symbol}', '', '${livePriceStr}')">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-jup-accent animate-ping"></span>
-              <span class="font-bold text-sm text-white">$${pos.symbol}</span>
-              <span class="text-xs text-jup-textMuted mono">${pos.sol_spent} SOL</span>
-            </div>
-            <span class="text-sm font-bold mono ${isWin ? 'text-jup-green' : 'text-jup-red'}">
-              ${isWin ? '+' : ''}${pnlPct.toFixed(2)}%
-            </span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 my-2 p-2 rounded-lg bg-jup-bg text-xs mono">
-            <div>
-              <span class="text-jup-textMuted block text-[10px]">Live Price:</span>
-              <b class="text-white">$${livePriceStr}</b>
-            </div>
-            <div>
-              <span class="text-jup-textMuted block text-[10px]">Live Market Cap:</span>
-              <b class="text-white">${formatUSD(liveMcap)}</b>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-1" onclick="event.stopPropagation()">
-            <span class="text-xs text-jup-accent mono">Score: ${pos.score || 0}/100</span>
-            <div class="flex items-center gap-2">
-              <button onclick="copyCA('${pos.token_ca}')" class="px-2.5 py-1 rounded-md bg-jup-surface hover:bg-jup-hover text-slate-200 text-xs mono border border-jup-border">
-                Copy CA
-              </button>
-              <button onclick="openChartModal('${pos.token_ca}', '${pos.symbol}', '', '${livePriceStr}')" class="px-2.5 py-1 rounded-md bg-jup-accentDark text-jup-accent text-xs mono font-semibold border border-jup-accent/30">
-                Chart 📈
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderDrawerHistoryCard(pos) {
-      const isWin = pos.exit_reason && pos.exit_reason.includes('TP');
-      const multiplier = pos.peak_multiplier ? pos.peak_multiplier.toFixed(2) : '1.00';
-
-      return `
-        <div class="p-3.5 rounded-xl bg-jup-surface border border-jup-border flex items-center justify-between text-xs mono">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-white text-sm">$${pos.symbol}</span>
-              <span class="text-[10px] text-jup-textMuted">#${pos.id}</span>
-            </div>
-            <div class="text-[11px] text-jup-textMuted mt-0.5">${pos.exit_reason || 'Closed'}</div>
-          </div>
-          <div class="text-right flex items-center gap-3">
-            <div>
-              <div class="${isWin ? 'text-jup-green font-bold' : 'text-jup-textMuted'} text-xs">
-                ${isWin ? '🟢 WIN' : '⚪ CLOSED'} (${multiplier}x)
-              </div>
-              <div class="text-[10px] text-slate-400">${formatUSD(pos.entry_mcap)} ➔ ${formatUSD(pos.exit_price_usd ? pos.current_mcap : pos.entry_mcap)}</div>
-            </div>
-            <button onclick="openChartModal('${pos.token_ca}', '${pos.symbol}', '', '')" class="p-1.5 rounded-lg bg-jup-bg border border-jup-border hover:border-jup-accent text-jup-textMuted hover:text-jup-accent transition-colors">
-              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    async function fetchHttpFallback() {
-      try {
-        const [resSig, resStats, resPos] = await Promise.all([
-          fetch('/api/signals').then(r => r.json()),
-          fetch('/api/stats').then(r => r.json()),
-          fetch('/api/positions').then(r => r.json())
-        ]);
-
-        if (resStats && resStats.data) {
-          const s = resStats.data;
-          document.getElementById('statBalance').innerText = `${parseFloat(s.virtual_balance_sol || 0.1).toFixed(4)} SOL`;
-          const pnl = parseFloat(s.realized_pnl_sol || 0);
-          const pnlEl = document.getElementById('statPnl');
-          pnlEl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(4)} SOL`;
-          pnlEl.className = `mono font-semibold ${pnl >= 0 ? 'text-jup-green' : 'text-jup-red'}`;
-
-          const total = (s.win_trades || 0) + (s.lose_trades || 0);
-          const winrate = total > 0 ? (((s.win_trades || 0) / total) * 100).toFixed(1) : '0.0';
-          document.getElementById('statWinRate').innerText = `${winrate}% (${s.win_trades || 0}W/${s.lose_trades || 0}L)`;
-        }
-
-        if (resSig && resSig.data && resSig.data.length > 0) {
-          document.getElementById('tokenBadge').innerText = `${resSig.data.length} Tokens`;
-          document.getElementById('signalsList').innerHTML = resSig.data.map(s => renderSignalCard(s, null)).join('');
-          lucide.createIcons();
-        }
-
-        if (resPos) {
-          const activePos = resPos.active || [];
-          document.getElementById('posBadge').innerText = `${activePos.length} Active`;
-          if (activePos.length > 0) {
-            document.getElementById('activePosList').innerHTML = activePos.map(p => renderActiveCard(p, null)).join('');
-          }
-
-          const closedPos = resPos.closed || [];
-          document.getElementById('drawerHistoryCount').innerText = closedPos.length;
-          if (closedPos.length > 0) {
-            document.getElementById('drawerHistoryList').innerHTML = closedPos.map(renderDrawerHistoryCard).join('');
-            lucide.createIcons();
-          }
-        }
-      } catch (e) {
-        console.error('HTTP Fallback error:', e);
-      }
-    }
-
-    function connectWS() {
-      // Fetch immediate snapshot via HTTP first so cards render instantly!
-      fetchHttpFallback();
-
-      // Use window.location.host so it works on both localhost AND IP:8000
-      const loc = window.location;
-      const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProto}//${loc.host}/ws/live`;
-      const ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const quotes = data.quotes || {};
-
-          if (data.stats) {
-            document.getElementById('statBalance').innerText = `${parseFloat(data.stats.virtual_balance_sol || 0.1).toFixed(4)} SOL`;
-            const pnl = parseFloat(data.stats.realized_pnl_sol || 0);
-            const pnlEl = document.getElementById('statPnl');
-            pnlEl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(4)} SOL`;
-            pnlEl.className = `mono font-semibold ${pnl >= 0 ? 'text-jup-green' : 'text-jup-red'}`;
-
-            const total = (data.stats.win_trades || 0) + (data.stats.lose_trades || 0);
-            const winrate = total > 0 ? (((data.stats.win_trades || 0) / total) * 100).toFixed(1) : '0.0';
-            document.getElementById('statWinRate').innerText = `${winrate}% (${data.stats.win_trades || 0}W/${data.stats.lose_trades || 0}L)`;
-          }
-
-          if (data.signals && data.signals.length > 0) {
-            document.getElementById('tokenBadge').innerText = `${data.signals.length} Tokens`;
-            document.getElementById('signalsList').innerHTML = data.signals.map(s => renderSignalCard(s, quotes[s.ca])).join('');
-            lucide.createIcons();
-          }
-
-          const activePos = data.active_positions || [];
-          document.getElementById('posBadge').innerText = `${activePos.length} Active`;
-
-          if (activePos.length > 0) {
-            document.getElementById('activePosList').innerHTML = activePos.map(p => renderActiveCard(p, quotes[p.token_ca])).join('');
-          } else {
-            document.getElementById('activePosList').innerHTML = `
-              <div class="p-8 rounded-xl border border-dashed border-jup-border text-center text-xs text-jup-textMuted mono">
-                Tidak ada posisi aktif saat ini.<br>Modal sandbox siap 100% untuk entry.
-              </div>
-            `;
-          }
-
-          const closedPos = data.closed_positions || [];
-          document.getElementById('drawerHistoryCount').innerText = closedPos.length;
-          if (closedPos.length > 0) {
-            document.getElementById('drawerHistoryList').innerHTML = closedPos.map(renderDrawerHistoryCard).join('');
-            lucide.createIcons();
-          }
-
-        } catch (e) {
-          console.error('WS parse error:', e);
-        }
-      };
-
-      ws.onclose = () => setTimeout(connectWS, 1000);
-    }
-
-    connectWS();
-  </script>
+  <script src="/app.js"></script>
 </body>
 </html>

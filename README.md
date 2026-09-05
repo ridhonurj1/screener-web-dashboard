@@ -1,41 +1,74 @@
-# ScreenerNantiAja — Web Dashboard & Real-Time Quant Terminal
+# ScreenerNantiAja — Solana Alpha Terminal
 
-Modern, decoupled real-time Web Dashboard for **ScreenerNantiAja** (Solana Quant Screener & Autonomous Execution Suite).
+Real-time Web Dashboard untuk **ScreenerNantiAja** (Solana Quant Screener & Autonomous Execution Suite). Didesain sebagai terminal trading profesional: identitas *alpha radar*, aksen electric-lime di atas deep navy, numerik tabular monospace, dan animasi mikro 200ms dari engine.
 
-## 🚀 Fitur Utama
+![brand](public/logo.svg)
 
-- **Jupiter (jup.ag) Design System**:
-  - Dark theme signature `#0E141E`, `#151D2C`, dan aksen Electric Lime `#C7F284` & Mint Cyan `#28D7B5`.
-  - Minimalist top bar dengan slide-over drawer menu (Garis 3 / `☰`).
-  - Fluid 100vw x 100vh layout dengan card hover elevation.
-- **Sub-Detik (500ms) Real-Time WebSocket**:
-  - Membaca live on-chain token signals, active open positions, dan realized PnL langsung dari database engine SQLite WAL.
-  - Zero Cloudflare CDN cache delay dengan update harga live dan visual blink animations.
-- **In-App Real-Time Candlestick Chart**:
-  - Klik kartu koin mana saja untuk langsung membuka chart live PumpSwap / Raydium di dalam aplikasi tanpa perlu pindah tab.
-- **Fitur Engine Telegram Terintegrasi**:
-  - 🔍 **Quick CA Checker**: Input bar pencarian CA token langsung di header atas.
-  - 🧠 **Top Smart Money Radar**: Peringkat 231 wallet whale dengan win rate tinggi.
-  - 📊 **Laporan Kinerja & Rekapitulasi (Recap Menu)**: Evaluasi performa 24 Jam, 7 Hari, 30 Hari, dan All-Time.
-  - 💳 **Manajemen Wallet Trading**: Public key deposit address, pengaturan modal default buy SOL, slippage, auto-buy on-chain, dan fitur **Export Private Key (Base58)**.
+## 🚀 Fitur
 
-## 🛠️ Tech Stack & Arsitektur
+### Market Radar & Data Live
+- **Alpha Screener Radar** — sinyal token live via WebSocket (tick 200ms), dengan logo token (Jupiter Tokens API), tier/strategy chip, Alpha Score meter, dan sparkline harga real-time.
+- **KPI Strip** — saldo sandbox, realized PnL (% modal), win rate meter, dan aktivitas engine.
+- **Filter & Sort** — sinyal Aktif/Semua/Tertutup, urut terbaru/multiplikasi/skor.
+- **Status Bar** — harga SOL live (DexScreener), gas (base + priority fee), kecepatan engine (sync ms, tick age), klien WebSocket & uptime.
+- **Connection Pill** — LIVE / MENGHUBUNGKAN / OFFLINE (klik untuk reconnect), auto-reconnect berjenjang.
 
-- **Backend Bridge**: Python 3.11 (`aiohttp`, `aiohttp-cors`, SQLite WAL).
-- **Frontend**: Single Page Application (HTML5, Tailwind CSS, Lucide Icons, WebSocket Client).
-- **Arsitektur**: Decoupled (Terpisah mandiri dari engine `ScreenerNantiAja`).
+### Trading Manual & Otomatis
+- **Trade Ticket** — beli/jual manual dari kartu token, chart modal, atau kartu posisi.
+  - Mode **Paper** (sandbox) & **Live** (swap on-chain riil via Jupiter `SwapRouter`).
+  - Preview estimasi token + price impact live sebelum konfirmasi (Jupiter quote).
+  - Jual parsial (25/50/75/100%) dengan akuntansi saldo & PnL otomatis.
+- **Kontrol Automasi** — status radar scanner & paper exit loop (selalu aktif), toggle **Auto-Buy On-Chain** untuk mode riil otomatis, plus parameter default buy & slippage.
+- **Posisi & Riwayat** — panel posisi aktif dengan PnL live, riwayat trade lengkap (R-multiple, hold duration, hasil TP/SL).
 
-## 📦 Cara Menjalankan
+### Wallet & Smart Money
+- **Import Wallet Sendiri** — masuk dengan private key Base58/hex (terenkripsi oleh engine `wallet_manager`).
+- **Export Private Key**, deposit address, dan saldo on-chain.
+- **Top Smart Money Radar** — leaderboard wallet whale (win rate 7d, PnL, kategori, tags).
+- **Evaluasi & Recap** — laporan kinerja engine 24 jam / 7 hari / 30 hari / all-time.
+- **Quick CA Checker** — cek token Solana mana pun langsung dari header (shortcut `/`).
+
+## 🎨 Desain (Rebranding v2)
+
+- Logo baru **radar-pulse**: sweep lime gradient dengan blip deteksi — favicon, header, dan status bar.
+- Design system CSS murni (zero CDN): token warna berlapis, radii, motion, dan state (`public/app.css`).
+- Semua ikon inline SVG — tetap berfungsi di jaringan Tailscale tanpa internet.
+- Skeleton loading, empty state, toast bertipe, keyboard (`/` fokus pencarian, `Esc` menutup overlay), responsif hingga mobile.
+
+## 🛠️ Arsitektur
+
+```
+┌────────────────────┐  SQLite WAL   ┌──────────────────┐   WebSocket/REST   ┌──────────────┐
+│ ScreenerNantiAja   │ ────────────► │  api_bridge.py   │ ◄────────────────► │  public/     │
+│ (engine + server)  │   baca ~1ms   │  aiohttp :8000   │    tick 200ms      │ index.html   │
+│ Tailscale network  │               │  + Jupiter/Dex   │                    │ app.css/js   │
+└────────────────────┘               └──────────────────┘                    └──────────────┘
+```
+
+- **Bridge** (`api_bridge.py`): membaca SQLite WAL engine ke RAM (<1ms), broadcast WebSocket 200ms, REST API, proxy Jupiter/DexScreener dengan cache, dan eksekusi trade manual (paper & live via `SwapRouter`).
+- **Frontend**: SPA statis tanpa build step — HTML/CSS/JS murni.
+- **Path engine dapat dikonfigurasi** via env: `ENGINE_DIR` dan `DB_PATH`. Tanpa modul engine (mis. di mesin dev), bridge tetap jalan read-only dengan degradasi elegan.
+
+## 📦 Menjalankan
 
 ```bash
-# Install dependencies
 pip install aiohttp aiohttp-cors
 
-# Jalankan server API & Web
+# di server engine (path default /home/kaiden/projects/ScreenerNantiAja)
 python3 api_bridge.py
 
-# Atau jalankan via PM2 di background
+# atau dengan path kustom / mesin dev
+ENGINE_DIR=/path/to/ScreenerNantiAja DB_PATH=/path/to/screener.db python3 api_bridge.py
+
+# via PM2
 pm2 start "python3 api_bridge.py" --name "screener-web"
 ```
 
-Buka di browser: `http://localhost:8000`
+Buka `http://localhost:8000` (atau IP Tailscale server dari perangkat mana pun).
+
+## ⚠️ Catatan Keamanan
+
+- Mode **Live** mengirim transaksi on-chain riil dari wallet engine — selalu konfirmasi dua langkah di UI.
+- Auto-Buy On-Chain hanya aktif setelah diaktifkan eksplisit di menu Akun & Wallet.
+- Import wallet menggantikan wallet engine — pindahkan saldo lama terlebih dahulu.
+- Export private key menampilkan kredensial sensitif; jangan pernah dibagikan.
