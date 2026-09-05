@@ -154,6 +154,7 @@ function applyLogos() {
     const logo = TOKEN_LOGOS.get(holder.dataset.ca);
     if (!logo) continue;
     holder.classList.remove(...AVATAR_TONES);
+    holder.textContent = '';   // drop the ticker initials so they don't cover the logo
     const img = document.createElement('img');
     img.src = logo;
     img.alt = '';
@@ -216,13 +217,19 @@ function sparklineSVG(ca) {
   const line = `M${pts.join('L')}`;
   const area = `${line}L${W - PAD},${H}L${PAD},${H}Z`;
   const gid = 'sg' + Math.abs(hashStr(ca)).toString(36);
-  return `<div class="sig-spark"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <path class="area" d="${area}" fill="url(#${gid})"/>
-    <path class="line" d="${line}" stroke="${color}"/>
-  </svg></div>`;
+  const [lx, ly] = pts[pts.length - 1].split(',');
+  return `<div class="sig-spark">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${color}" stop-opacity="0.28"/>
+        <stop offset="1" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <line class="sp-grid" vector-effect="non-scaling-stroke" x1="${PAD}" x2="${W - PAD}" y1="${H / 2}" y2="${H / 2}"/>
+      <path class="sp-area" d="${area}" fill="url(#${gid})"/>
+      <path class="sp-line" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
+    </svg>
+    <i class="sp-dot" style="left:${(+lx / W * 100).toFixed(1)}%;top:${(+ly / H * 100).toFixed(1)}%;background:${color};box-shadow:0 0 8px ${color}"></i>
+  </div>`;
 }
 
 function hashStr(s) {

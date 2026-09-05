@@ -1487,6 +1487,7 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   background: linear-gradient(135deg, var(--bg-4), #2e4066);
   border: 1px solid var(--border-3);
   user-select: none;
+  overflow: hidden;
 }
 
 .token-avatar.tone-lime { background: linear-gradient(135deg, var(--lime), #8fd14f); border-color: transparent; }
@@ -1562,18 +1563,26 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 /* Sparkline */
 .sig-spark {
   margin: 10px 0 9px;
-  height: 34px;
+  height: 42px;
   border-radius: 8px;
-  background:
-    linear-gradient(var(--bg-0), var(--bg-0)) padding-box;
+  background: var(--bg-0);
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border-1);
 }
 
 .sig-spark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sig-spark .gridline { stroke: var(--border-1); stroke-width: 1; }
-.sig-spark .line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
-.sig-spark .area { opacity: 0.14; }
+.sig-spark .sp-grid { stroke: var(--border-1); stroke-width: 1; stroke-dasharray: 2 5; opacity: 0.8; }
+.sig-spark .sp-line { fill: none; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.sig-spark .sp-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-0);
+  transform: translate(-50%, -50%);
+}
+
 .sig-spark-empty {
   position: absolute;
   inset: 0;
