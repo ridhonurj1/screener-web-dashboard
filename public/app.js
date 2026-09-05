@@ -18,6 +18,7 @@ const state = {
   sideTab: 'open',
   lastTickAt: 0,
   priceHistory: new Map(),   // ca -> number[] (ring buffer)
+  priceHistoryTs: new Map(), // ca -> timestamp push terakhir (untuk flat tick)
   cardRefs: new Map(),       // ca -> {root, refs}
   domOrder: '',
   closedSig: '',             // change-detection for history list
@@ -284,10 +285,15 @@ function pushPrice(ca, price) {
   if (!price || !isFinite(price) || price <= 0) return;
   let buf = state.priceHistory.get(ca);
   if (!buf) { buf = []; state.priceHistory.set(ca, buf); }
+  const nowMs = Date.now();
   const last = buf[buf.length - 1];
-  if (last === price) return;          // skip flat duplicates
+  const lastTs = state.priceHistoryTs.get(ca) || 0;
+  // Harga flat tetap tergambar (maks 1 titik / 2 detik): tanpa ini sparkline
+  // selamanya "MENUNGGU TICK HARGA…" saat pasar sepi / halaman baru dimuat.
+  if (last === price && nowMs - lastTs < 2000) return;
   buf.push(price);
   if (buf.length > 90) buf.shift();
+  state.priceHistoryTs.set(ca, nowMs);
 }
 
 function sparklineSVG(ca) {
