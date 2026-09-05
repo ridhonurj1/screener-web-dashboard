@@ -34,6 +34,7 @@ let walletAutoBuy = false;          // real-money auto-buy state (from wallet se
 
 const I = {
   bolt: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7v8l10-12h-7l0-8z"/></svg>',
+  trophy: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
   copy: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
   chart: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 3 5-6"/></svg>',
   coins: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>',
@@ -549,12 +550,121 @@ function renderHistory() {
   }).join('');
 }
 
-/* ---------------- Stats / KPIs ---------------- */
+/* ---------------- Profit milestones ---------------- */
+
+const MILESTONES = [0.05, 0.1, 0.25, 0.5, 1, 2, 5];
+const MS_KEY = 'sna_milestones_v1';
+let msState = (() => {
+  try { return JSON.parse(localStorage.getItem(MS_KEY)) || { hit: {} }; } catch (e) { return { hit: {} }; }
+})();
+let lastMilestonePnl = null;
+
+function checkMilestones(pnl) {
+  if (lastMilestonePnl === null) {
+    // first tick: silently mark milestones already passed (no retro notifications)
+    lastMilestonePnl = pnl;
+    let changed = false;
+    for (const m of MILESTONES) {
+      const key = String(m);
+      if (pnl >= m && !msState.hit[key]) { msState.hit[key] = { at: null }; changed = true; }
+    }
+    if (changed) {
+      try { localStorage.setItem(MS_KEY, JSON.stringify(msState)); } catch (e) { /* private mode */ }
+      if (currentPage === 'recap') renderMilestones();
+    }
+    return;
+  }
+  if (pnl === lastMilestonePnl) return;
+  lastMilestonePnl = pnl;
+  let fired = [];
+  for (const m of MILESTONES) {
+    const key = String(m);
+    if (pnl >= m && !msState.hit[key]) {
+      msState.hit[key] = { at: Date.now() };
+      fired.push(m);
+    }
+  }
+  if (fired.length) {
+    try { localStorage.setItem(MS_KEY, JSON.stringify(msState)); } catch (e) { /* private mode */ }
+    fired.forEach(m => milestoneToast(m, pnl));
+    if (currentPage === 'recap') renderMilestones();
+  }
+}
+
+function milestoneToast(m, pnl) {
+  const zone = document.getElementById('toastZone');
+  const el = document.createElement('div');
+  el.className = 'toast milestone';
+  el.innerHTML = `${I.trophy}<div class="ms-toast-body">
+    <b>PROFIT MILESTONE +${m} SOL TERCAPAI!</b>
+    <span>Realized PnL saat ini ${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL</span>
+  </div>`;
+  zone.appendChild(el);
+  const flash = document.createElement('div');
+  flash.className = 'milestone-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1300);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 300);
+  }, 6000);
+}
+
+function resetMilestones() {
+  if (!confirm('Reset progres milestone? Notifikasi akan muncul lagi saat PnL menyentuh tiap level.')) return;
+  msState = { hit: {} };
+  lastMilestonePnl = null;
+  try { localStorage.setItem(MS_KEY, JSON.stringify(msState)); } catch (e) { /* noop */ }
+  renderMilestones();
+  toast('Progres milestone direset', 'info');
+}
+
+let msRenderKey = null;
+
+function renderMilestones() {
+  const list = document.getElementById('msList');
+  if (!list) return;
+  const pnl = parseFloat(state.stats.realized_pnl_sol) || 0;
+  const hitCount = MILESTONES.filter(m => msState.hit[String(m)]).length;
+  const next = MILESTONES.find(m => pnl < m);
+  const key = `${pnl.toFixed(6)}|${hitCount}|${next ?? 'done'}`;
+  if (key === msRenderKey) return;
+  msRenderKey = key;
+
+  const countEl = document.getElementById('msCount');
+  if (countEl) countEl.textContent = `${hitCount}/${MILESTONES.length}`;
+
+  const track = document.getElementById('msNextTrack');
+  const label = document.getElementById('msNextLabel');
+  if (track && label) {
+    if (next) {
+      const prev = MILESTONES[MILESTONES.indexOf(next) - 1] || 0;
+      const pct = Math.min(100, Math.max(0, ((pnl - prev) / (next - prev)) * 100));
+      track.style.width = pct + '%';
+      label.innerHTML = `<b class="mono" style="color:var(--text-1)">${fmtSol(pnl)}</b> / +${next.toFixed(2)} SOL · sisa <b class="mono" style="color:var(--lime)">+${fmtSol(next - pnl)}</b>`;
+    } else {
+      track.style.width = '100%';
+      label.innerHTML = `<b class="mono up">SEMUA MILESTONE TERCAPAI!</b> 🏆`;
+    }
+  }
+
+  list.innerHTML = MILESTONES.map(m => {
+    const hit = msState.hit[String(m)];
+    const isNext = next === m;
+    return `
+    <div class="ms-chip ${hit ? 'hit' : isNext ? 'next' : ''}" title="${hit ? (hit.at ? 'Tercapai ' + new Date(hit.at).toLocaleString('id-ID') : 'Tercapai (sebelum tracking aktif)') : isNext ? 'Milestone berikutnya' : 'Terkunci'}">
+      <span class="ms-icon">${hit ? I.trophy : isNext ? '🎯' : '🔒'}</span>
+      <span class="ms-val mono">+${m} <i>SOL</i></span>
+      <span class="ms-state">${hit ? 'HIT' : isNext ? 'NEXT' : 'LOCKED'}</span>
+    </div>`;
+  }).join('');
+}
 
 function renderStats() {
   const s = state.stats || {};
   const balance = parseFloat(s.virtual_balance_sol) || 0;
   const pnl = parseFloat(s.realized_pnl_sol) || 0;
+  checkMilestones(pnl);
   const wins = parseInt(s.win_trades) || 0;
   const loses = parseInt(s.lose_trades) || 0;
   const total = wins + loses;
@@ -621,7 +731,7 @@ function applyPayload(data) {
   renderHistory();
   renderPortfolio(false);
   renderRecap();
-  if (currentPage === 'recap') renderEnginePerformance();
+  if (currentPage === 'recap') { renderEnginePerformance(); renderMilestones(); }
   renderStats();
 }
 
@@ -1729,7 +1839,7 @@ document.getElementById('engineTabs').addEventListener('click', e => {
 activatePage();
 if (currentPage === 'portofolio') renderPortfolio(true);
 if (currentPage === 'evaluasi') renderRecap(true);
-if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); }
+if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); renderMilestones(); }
 
 httpBootstrap();
 connectWS();

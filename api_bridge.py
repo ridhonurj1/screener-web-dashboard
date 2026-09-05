@@ -148,7 +148,20 @@ async def api_signals(request):
         limit = min(max(int(request.query.get("limit", "40")), 1), 1000)
     except Exception:
         limit = 40
-    data = in_memory_state["signals"][:limit]
+    cached = in_memory_state["signals"]
+    if limit <= len(cached):
+        data = cached[:limit]
+    else:
+        # recap-style consumers want the full history: read the WAL directly
+        # (~ms) instead of inflating the 200ms RAM broadcast payload.
+        try:
+            conn = get_db_connection(True)
+            c = conn.cursor()
+            c.execute("SELECT rowid, * FROM signals ORDER BY rowid DESC LIMIT ?", (limit,))
+            data = [dict(r) for r in c.fetchall()]
+            conn.close()
+        except Exception:
+            data = cached[:limit]
     return web.json_response({"success": True, "count": len(data), "data": data})
 
 async def api_positions(request):
