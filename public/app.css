@@ -2290,6 +2290,40 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 .cto-chip { animation: msGlow 1.8s ease-in-out infinite; }
 
 /* ==========================================================================
+   Logs page (/logs)
+   ========================================================================== */
+
+.log-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.log-toolbar .input { width: 170px; }
+
+.log-console {
+  height: 560px;
+  overflow-y: auto;
+  padding: 14px 18px;
+  font-size: 11.5px;
+  line-height: 1.95;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 26px),
+    var(--bg-0);
+}
+
+.log-line { white-space: pre-wrap; word-break: break-word; }
+.log-line .lt { color: var(--text-4); margin-right: 6px; }
+.log-line .lc { font-weight: 800; letter-spacing: 0.04em; margin-right: 6px; }
+.log-line .lm { color: var(--text-2); }
+
+.cat-ENGINE .lc { color: var(--cyan); }
+.cat-TRADE .lc { color: var(--lime); }
+.cat-WATCHDOG .lc { color: var(--amber); }
+.cat-ALERTS .lc { color: #b78cff; }
+.cat-API .lc { color: var(--blue); }
+.cat-SYS .lc { color: var(--text-3); }
+
+.log-line.sev-error .lm { color: var(--red); }
+.log-line.sev-success .lm { color: var(--green); }
+.log-line.sev-warn .lm { color: var(--amber); }
+
+/* ==========================================================================
    Skeletons & empty states
    ========================================================================== */
 

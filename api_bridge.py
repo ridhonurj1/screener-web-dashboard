@@ -4,6 +4,7 @@ import sqlite3
 import os
 import sys
 import time
+from collections import deque
 from aiohttp import web, ClientSession, ClientTimeout
 import aiohttp_cors
 # ---------------------------------------------------------------------------
@@ -97,9 +98,11 @@ async def cto_sentinel_loop(app):
                     st["cto"] = True
                     st["at"] = now
                     st["surge"] = (mcap / st["trough"] - 1.0) * 100.0
+                    blog(f"CTO terdeteksi ${ca[:4]}… — mcap naik +{st['surge']:.1f}% dari dasar, liq ${liq:,.0f}", "ALERTS", "success")
         except asyncio.CancelledError:
             break
-        except Exception:
+        except Exception as e:
+            blog_debounced("cto_err", f"CTO sweep gagal — retry: {e}", "WATCHDOG", "warn", 60)
             await asyncio.sleep(5)
 
 def get_db_connection(read_only=True):
@@ -145,6 +148,25 @@ def sync_ram_state_from_engine_db():
             st = CTO_STATE.get(s.get("ca"))
             s["cto"] = bool(st and st.get("cto"))
 
+        # --- Engine delta logging ---
+        global _prev_signal_ids, _prev_open_pos
+        cur_ids = {s["ca"]: s for s in signals}
+        if _prev_signal_ids is not None:
+            for ca, s in cur_ids.items():
+                if ca not in _prev_signal_ids:
+                    blog(f"Sinyal baru ${s.get('symbol')} — skor {s.get('score')} · MC ${float(s.get('entry_mcap') or 0):,.0f} · {s.get('strategy', '')}", "ENGINE", "success")
+        _prev_signal_ids = cur_ids
+        cur_open = {p["id"]: p for p in active_positions}
+        if _prev_open_pos is not None:
+            for pid, p in cur_open.items():
+                if pid not in _prev_open_pos:
+                    blog(f"Posisi DIBUKA ${p.get('symbol')} — {float(p.get('sol_spent') or 0):.3f} SOL (paper)", "TRADE", "info")
+            for pid, p in (_prev_open_pos or {}).items():
+                if pid not in cur_open:
+                    net = (float(p.get('realized_sol') or 0) - float(p.get('sol_spent') or 0))
+                    blog(f"Posisi DITUTUP ${p.get('symbol')} — net {net:+.4f} SOL · {p.get('exit_reason', '')}", "TRADE", "success" if net >= 0 else "warn")
+        _prev_open_pos = cur_open
+
         in_memory_state["signals"] = signals
         in_memory_state["active_positions"] = active_positions
         in_memory_state["closed_positions"] = closed_positions
@@ -154,13 +176,37 @@ def sync_ram_state_from_engine_db():
         if signals:
             in_memory_state["last_signal_rowid"] = signals[0]["rowid"]
 
-    except Exception:
+    except Exception as e:
         in_memory_state["perf"]["sync_ok"] = False
+        blog_debounced("db_sync_fail", f"DB sync gagal — auto-retry aktif: {e}", "WATCHDOG", "error", 30)
     finally:
         dt_ms = (time.perf_counter() - t0) * 1000.0
         perf = in_memory_state["perf"]
         perf["last_sync_ms"] = round(dt_ms, 2)
         perf["avg_sync_ms"] = round((perf["avg_sync_ms"] * 0.9 + dt_ms * 0.1) if perf["avg_sync_ms"] else dt_ms, 2)
+
+# ---------------------------------------------------------------------------
+# Bridge log bus — in-memory ring buffer feeding /logs.
+# Categories: ENGINE, TRADE, WATCHDOG, ALERTS, API, SYS
+# ---------------------------------------------------------------------------
+LOG_BUFFER = deque(maxlen=800)
+_log_seq = 0
+_log_debounce = {}
+
+def blog(msg, cat="ENGINE", sev="info"):
+    global _log_seq
+    _log_seq += 1
+    LOG_BUFFER.append({"id": _log_seq, "ts": time.time(), "cat": cat, "sev": sev, "msg": msg})
+
+def blog_debounced(key, msg, cat="WATCHDOG", sev="warn", interval=30.0):
+    now = time.time()
+    if now - _log_debounce.get(key, 0) >= interval:
+        _log_debounce[key] = now
+        blog(msg, cat, sev)
+
+# Engine delta trackers for the sync loop
+_prev_signal_ids = None
+_prev_open_pos = None
 
 def compute_engine_health():
     """
@@ -275,6 +321,45 @@ async def api_check_ca(request):
         return web.json_response({"success": True, "dex": sol_pair})
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=502)
+
+async def api_logs(request):
+    """Incremental bridge log feed + engine telemetry snapshot + optional engine file tail."""
+    try:
+        since = int(request.query.get("since_id", "0"))
+    except Exception:
+        since = 0
+    entries = [e for e in LOG_BUFFER if e["id"] > since]
+
+    telemetry = []
+    try:
+        conn = get_db_connection(True)
+        c = conn.cursor()
+        c.execute("SELECT * FROM system_telemetry_history ORDER BY id DESC LIMIT 40")
+        telemetry = [dict(r) for r in c.fetchall()]
+        conn.close()
+    except Exception as e:
+        blog_debounced("tel_read", f"Telemetry read gagal: {e}", "WATCHDOG", "warn", 120)
+
+    engine_log = None
+    log_path = os.environ.get("ENGINE_LOG_FILE", "")
+    if log_path and os.path.exists(log_path):
+        try:
+            with open(log_path, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(max(0, size - 30000))
+                engine_log = f.read().decode("utf-8", "replace").splitlines()[-250:]
+        except Exception:
+            engine_log = None
+
+    return web.json_response({
+        "success": True,
+        "entries": entries,
+        "last_id": _log_seq,
+        "telemetry": telemetry,
+        "engine_file_available": engine_log is not None,
+        "engine_log": engine_log
+    })
 
 async def api_get_wallet(request):
     user_id = request.query.get("user_id", "6166029678")
@@ -520,6 +605,7 @@ async def api_trade(request):
         conn.commit()
         conn.close()
         sync_ram_state_from_engine_db()
+        blog(f"MANUAL BUY ${symbol} — {amount_sol:.2f} SOL @ ${price_usd:,.8f} (paper, ~{tokens_bought:,.0f} token)", "TRADE", "success")
         return web.json_response({"success": True, "mode": "paper", "position_id": pos_id, "tokens_bought": tokens_bought, "message": f"Paper buy ${symbol} — {tokens_bought:,.0f} token"})
 
     # ----------------------------------------------------------------- SELL
@@ -598,6 +684,7 @@ async def api_trade(request):
     conn.commit()
     conn.close()
     sync_ram_state_from_engine_db()
+    blog(f"MANUAL SELL {percent:.0f}% ${pos['symbol']} — {'full close' if full_close else 'parsial'} · net {pnl_sol:+.4f} SOL (paper)", "TRADE", "success" if pnl_sol >= 0 else "warn")
     return web.json_response({
         "success": True, "mode": "paper", "position_id": position_id,
         "closed": full_close, "realized_sol": realized_sol, "pnl_sol": pnl_sol,
@@ -705,6 +792,7 @@ async def websocket_handler(request):
     await ws.prepare(request)
     request.app['websockets'].add(ws)
 
+    blog(f"Klien WebSocket terhubung ({len(request.app['websockets'])} aktif)", "SYS")
     try:
         # Immediate send from RAM (<1ms)
         await ws.send_str(json.dumps({
@@ -721,6 +809,7 @@ async def websocket_handler(request):
         pass
     finally:
         request.app['websockets'].discard(ws)
+        blog(f"Klien WebSocket terputus ({len(request.app['websockets'])} aktif)", "SYS")
 
     return ws
 
@@ -763,6 +852,7 @@ async def start_background_tasks(app):
     app['websockets'] = set()
     app['http_session'] = ClientSession()
     sync_ram_state_from_engine_db()
+    blog(f"Bridge start — engine modules: {'TERMUAT' if HAS_ENGINE_MODULES else 'tidak tersedia (read-only)'} · DB: {os.path.basename(DB_PATH)}", "SYS", "success")
     app['broadcaster'] = asyncio.create_task(live_broadcaster(app))
     app['cto_sentinel'] = asyncio.create_task(cto_sentinel_loop(app))
 
@@ -789,6 +879,7 @@ def create_app():
     app.router.add_get('/portofolio', index_handler)
     app.router.add_get('/evaluasi', index_handler)
     app.router.add_get('/recap', index_handler)
+    app.router.add_get('/logs', index_handler)
     app.router.add_get('/ws/live', websocket_handler)
     app.router.add_get('/{filename}', static_file_handler)
 
@@ -801,6 +892,7 @@ def create_app():
     app.router.add_get('/api/check_ca', api_check_ca)
     app.router.add_get('/api/network', api_network)
     app.router.add_get('/api/token_meta', api_token_meta)
+    app.router.add_get('/api/logs', api_logs)
     app.router.add_get('/api/wallet', api_get_wallet)
     app.router.add_get('/api/wallet/export', api_export_wallet)
     app.router.add_post('/api/wallet/settings', api_update_wallet_settings)
