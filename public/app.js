@@ -930,33 +930,123 @@ function buildPortfolioData() {
   return { balance: B, initial: events.length ? B - sumNet : B, points, ledger };
 }
 
-function equityChartSVG(points) {
-  const W = 300, H = 100, PAD = 8;
+function niceTicks(min, max, count = 4) {
+  const range = (max - min) || 0.001;
+  const rawStep = range / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
+  const start = Math.ceil(min / step) * step;
+  const ticks = [];
+  for (let v = start; v <= max + 1e-9; v += step) ticks.push(parseFloat(v.toFixed(10)));
+  return { ticks, step };
+}
+
+function tickDecimals(step) {
+  if (step < 0.001) return 4;
+  if (step < 0.01) return 3;
+  if (step < 0.1) return 3;
+  return 2;
+}
+
+function fmtAxisTime(ts) {
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return `${hh}:${mm}`;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}:${mm}`;
+}
+
+/* Interactive equity chart: Y-axis ruler, time axis, initial-capital
+   baseline, hover crosshair + tooltip. Line lives in a stretched SVG,
+   all text/markers are HTML overlays so nothing distorts. */
+function mountEquityChart(host, points, initial) {
+  if (!host) return;
   if (points.length < 2) {
-    return `<div style="height:120px;display:grid;place-items:center;font-family:var(--font-mono);font-size:10px;color:var(--text-4);letter-spacing:0.06em">KURVA SALDO MUNCUL SETELAH TRADE PERTAMA</div>`;
+    host.innerHTML = '<div class="eq-empty">KURVA SALDO MUNCUL SETELAH TRADE PERTAMA</div>';
+    return;
   }
+
   const vs = points.map(p => p.v);
-  let min = Math.min(...vs), max = Math.max(...vs);
-  if (max - min < 1e-6) { max += 0.005; min -= 0.005; }
-  const pts = points.map((p, i) => {
-    const x = PAD + (i / (points.length - 1)) * (W - 2 * PAD);
-    const y = H - PAD - ((p.v - min) / (max - min)) * (H - 2 * PAD);
-    return x.toFixed(1) + ',' + y.toFixed(1);
-  });
-  const up = vs[vs.length - 1] >= vs[0];
-  const color = up ? '#2fd77b' : '#ff5470'; // literal hex: SVG attributes cannot resolve CSS vars
+  const hasBase = initial > 0;
+  let min = Math.min(...vs);
+  let max = Math.max(...vs);
+  if (hasBase) { min = Math.min(min, initial); max = Math.max(max, initial); }
+  const pad = (max - min) * 0.08 || Math.abs(max) * 0.02 || 0.001;
+  min -= pad; max += pad;
+
+  const TOP = 7, BOT = 7;                 // headroom (% of plot height)
+  const n = points.length;
+  const yPct = v => TOP + (1 - (v - min) / (max - min)) * (100 - TOP - BOT);
+  const xPct = i => (i / (n - 1)) * 100;
+
+  const { ticks, step } = niceTicks(min, max, 4);
+  const dec = tickDecimals(step);
+
+  // paths in a 1000x1000 stretched viewBox
+  const px = i => (xPct(i) / 100) * 1000;
+  const py = v => (yPct(v) / 100) * 1000;
+  const pts = points.map((p, i) => `${px(i).toFixed(1)},${py(p.v).toFixed(1)}`);
   const line = `M${pts.join('L')}`;
-  const area = `${line}L${W - PAD},${H}L${PAD},${H}Z`;
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="pfGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <line class="gridline" x1="0" y1="${H / 4}" x2="${W}" y2="${H / 4}"/>
-    <line class="gridline" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}"/>
-    <line class="gridline" x1="0" y1="${3 * H / 4}" x2="${W}" y2="${3 * H / 4}"/>
-    <path class="area" d="${area}" fill="url(#pfGrad)"/>
-    <path class="line" d="${line}"/>
-  </svg>`;
+  const area = `${line}L1000,1000L0,1000Z`;
+  const up = vs[n - 1] >= vs[0];
+  const color = up ? '#2fd77b' : '#ff5470';
+  const showBase = hasBase && initial >= min && initial <= max;
+
+  // x labels: 5 evenly spaced indices
+  const idxs = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * (n - 1)));
+
+  host.innerHTML = `
+    <svg class="eq-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+      ${ticks.map(v => `<line class="eq-grid" vector-effect="non-scaling-stroke" x1="0" x2="1000" y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}"/>`).join('')}
+      ${showBase ? `<line class="eq-base" vector-effect="non-scaling-stroke" x1="0" x2="1000" y1="${py(initial).toFixed(1)}" y2="${py(initial).toFixed(1)}"/>` : ''}
+      <defs><linearGradient id="pfGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${color}" stop-opacity="0.32"/>
+        <stop offset="1" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path class="eq-area" d="${area}" fill="url(#pfGrad)"/>
+      <path class="eq-glow" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
+      <path class="eq-line" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
+    </svg>
+    <div class="eq-plot">
+      <div class="eq-cross" hidden></div>
+      <div class="eq-dotc" hidden></div>
+      <div class="eq-last" style="left:${xPct(n - 1)}%;top:${yPct(vs[n - 1])}%"></div>
+    </div>
+    <div class="eq-yaxis">
+      ${ticks.map(v => `<span style="top:${yPct(v)}%">${v.toFixed(dec)}</span>`).join('')}
+      ${showBase ? `<i class="eq-base-tag" style="top:${yPct(initial)}%">MODAL ${initial.toFixed(dec)}</i>` : ''}
+    </div>
+    <div class="eq-xaxis">${idxs.map(i => `<span>${fmtAxisTime(points[i].t)}</span>`).join('')}</div>
+    <div class="eq-tip" hidden></div>`;
+
+  // hover crosshair + tooltip
+  const svg = host.querySelector('.eq-svg');
+  const cross = host.querySelector('.eq-cross');
+  const dot = host.querySelector('.eq-dotc');
+  const tip = host.querySelector('.eq-tip');
+
+  const move = e => {
+    const rect = svg.getBoundingClientRect();
+    const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const i = Math.round(fx * (n - 1));
+    const p = points[i];
+    const prev = points[Math.max(0, i - 1)];
+    const d = p.v - prev.v;
+    cross.hidden = false; dot.hidden = false; tip.hidden = false;
+    cross.style.left = (fx * 100) + '%';
+    dot.style.left = (fx * 100) + '%';
+    dot.style.top = yPct(p.v) + '%';
+    const px2 = Math.min(rect.width, Math.max(0, fx * rect.width));
+    tip.style.left = Math.min(rect.width - 74, Math.max(74, px2)) + 'px';
+    tip.style.top = `calc(${yPct(p.v)}% - 12px)`;
+    tip.innerHTML = `<b style="color:${color}">${p.v.toFixed(4)} SOL</b>
+      <span>${fmtAxisTime(p.t)}${i > 0 ? ` · <i style="font-style:normal;color:${d >= 0 ? 'var(--green)' : 'var(--red)'}">${d >= 0 ? '+' : ''}${d.toFixed(4)}</i>` : ''}</span>`;
+  };
+  const leave = () => { cross.hidden = true; dot.hidden = true; tip.hidden = true; };
+  svg.addEventListener('mousemove', move);
+  svg.addEventListener('mouseleave', leave);
 }
 
 function renderPortfolio(force) {
@@ -990,8 +1080,8 @@ function renderPortfolio(force) {
       </div>
     </div>
     <div class="pf-chart">
-      ${equityChartSVG(data.points)}
-      <div class="pf-chart-labels"><span>pergerakan saldo (ledger replay)</span><span>${data.points.length} titik</span></div>
+      <div class="eqchart" id="eqChart"></div>
+      <div class="pf-chart-labels"><span>pergerakan saldo · arahkan kursor ke chart untuk detail</span><span>${data.points.length} titik</span></div>
     </div>
     <div class="pf-stats">
       <div class="pf-stat"><div class="v">${closed.length + open.length}</div><div class="k">Total Transaksi</div></div>
@@ -1028,6 +1118,8 @@ function renderPortfolio(force) {
         </div>`;
       }).join('')}
     </div>`;
+
+  mountEquityChart(document.getElementById('eqChart'), data.points, data.initial);
 }
 
 /* ---------------- Wallet ---------------- */
