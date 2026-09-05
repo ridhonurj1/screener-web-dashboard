@@ -55,6 +55,53 @@ TOKEN_LOGO_TTL = 900.0  # 15 minutes
 # SOL price cache
 SOL_NET_CACHE = {"ts": 0.0, "price": 0.0, "change_24h": 0.0}
 
+# CTO sentinel state (mirrors the engine's Community Takeover criteria):
+# ca -> {"trough": float, "cto": bool, "at": float, "surge": float}
+CTO_STATE = {}
+CTO_CHECK_INTERVAL = 15  # seconds between on-chain sweeps
+
+async def cto_sentinel_loop(app):
+    session = app["http_session"]
+    while True:
+        try:
+            await asyncio.sleep(CTO_CHECK_INTERVAL)
+            cas = [s.get("ca") for s in list(in_memory_state["signals"])
+                   if (s.get("status") or "OPEN").upper() == "OPEN" and s.get("ca")]
+            if not cas:
+                continue
+            pairs = await fetch_dex_pairs(session, cas)
+            now = time.time()
+            for ca in cas:
+                pair = pairs.get(ca)
+                if not pair:
+                    continue
+                mcap = float(pair.get("marketCap") or pair.get("fdv") or 0)
+                liq = float((pair.get("liquidity") or {}).get("usd", 0) or 0)
+                vol1h = float((pair.get("volume") or {}).get("h1", 0) or 0)
+                if mcap <= 0:
+                    continue
+                st = CTO_STATE.setdefault(ca, {"trough": mcap, "cto": False, "at": 0.0, "surge": 0.0})
+                if st["cto"]:
+                    continue
+                st["trough"] = min(st["trough"], mcap)
+                # Engine criteria: real liquidity, healthy ratio, alive mcap,
+                # >= +40% rise from the tracked low, real 1h volume.
+                if (
+                    liq >= 5000.0
+                    and (liq / mcap) >= 0.08
+                    and mcap >= 25000.0
+                    and st["trough"] > 0
+                    and (mcap / st["trough"]) >= 1.40
+                    and vol1h >= 1000.0
+                ):
+                    st["cto"] = True
+                    st["at"] = now
+                    st["surge"] = (mcap / st["trough"] - 1.0) * 100.0
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            await asyncio.sleep(5)
+
 def get_db_connection(read_only=True):
     mode = "ro" if read_only else "rw"
     conn = sqlite3.connect(f"file:{DB_PATH}?mode={mode}", uri=True)
@@ -92,6 +139,11 @@ def sync_ram_state_from_engine_db():
         stats["total_signals_count"] = c.fetchone()[0]
 
         conn.close()
+
+        # Attach CTO flags computed by the sentinel
+        for s in signals:
+            st = CTO_STATE.get(s.get("ca"))
+            s["cto"] = bool(st and st.get("cto"))
 
         in_memory_state["signals"] = signals
         in_memory_state["active_positions"] = active_positions
@@ -605,7 +657,7 @@ async def api_network(request):
 JUPITER_TOKENS_URL = "https://lite-api.jup.ag/tokens/v2/search?query={ids}"
 
 async def api_token_meta(request):
-    """Token logos via Jupiter Tokens API, merged into a TTL cache."""
+    """Token logos + socials via Jupiter Tokens API, merged into a TTL cache."""
     cas = [c.strip() for c in (request.query.get("cas") or "").split(",") if 40 <= len(c.strip()) <= 50][:100]
     session = request.app["http_session"]
     now = time.time()
@@ -617,14 +669,34 @@ async def api_token_meta(request):
             if isinstance(tokens, list):
                 for t in tokens:
                     tid = t.get("id")
-                    if tid:
-                        TOKEN_LOGO_CACHE[tid] = {"url": t.get("icon"), "ts": now}
+                    if not tid:
+                        continue
+                    socials = {}
+                    for key in ("twitter", "telegram", "website", "discord"):
+                        url = t.get(key)
+                        if url:
+                            socials[key] = url
+                    for s in t.get("socials") or []:
+                        stype = s.get("type") or s.get("name")
+                        surl = s.get("url")
+                        if stype and surl:
+                            stype = stype.lower()
+                            if stype not in socials:
+                                socials[stype] = surl
+                    entry = {
+                        "url": t.get("icon"),
+                        "ts": now,
+                        "socials": socials,
+                    }
+                    TOKEN_LOGO_CACHE[tid] = entry
         except Exception:
             pass
         for ca in missing:
             if ca not in TOKEN_LOGO_CACHE:
-                TOKEN_LOGO_CACHE[ca] = {"url": None, "ts": now}
-    return web.json_response({"success": True, "logos": {ca: TOKEN_LOGO_CACHE[ca]["url"] for ca in cas if ca in TOKEN_LOGO_CACHE}})
+                TOKEN_LOGO_CACHE[ca] = {"url": None, "ts": now, "socials": {}}
+    logos = {ca: TOKEN_LOGO_CACHE[ca]["url"] for ca in cas if ca in TOKEN_LOGO_CACHE}
+    socials = {ca: TOKEN_LOGO_CACHE[ca].get("socials") or {} for ca in cas if ca in TOKEN_LOGO_CACHE}
+    return web.json_response({"success": True, "logos": logos, "socials": socials})
 
 # --- WEBSOCKET ENGINE EVENT BUS (ZERO EXTERNAL API DELAY) ---
 
@@ -692,9 +764,11 @@ async def start_background_tasks(app):
     app['http_session'] = ClientSession()
     sync_ram_state_from_engine_db()
     app['broadcaster'] = asyncio.create_task(live_broadcaster(app))
+    app['cto_sentinel'] = asyncio.create_task(cto_sentinel_loop(app))
 
 async def cleanup_background_tasks(app):
     app['broadcaster'].cancel()
+    app['cto_sentinel'].cancel()
     await app['broadcaster']
     for ws in list(app['websockets']):
         await ws.close()

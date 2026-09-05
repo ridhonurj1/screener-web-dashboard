@@ -21,12 +21,12 @@ const state = {
   cardRefs: new Map(),       // ca -> {root, refs}
   domOrder: '',
   closedSig: '',             // change-detection for history list
-  activePosSig: ''
 };
 
 let currentModalCa = '';
 const lastSeenPrices = {};
 const TOKEN_LOGOS = new Map();      // ca -> icon url
+const TOKEN_SOCIALS = new Map();    // ca -> {twitter, telegram, website, discord}
 const LOGOS_FETCHED = new Set();    // ca batches already requested
 let walletAutoBuy = false;          // real-money auto-buy state (from wallet settings)
 
@@ -46,6 +46,10 @@ const I = {
   info: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>',
   radar: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 1 0-8.01 8.91"/><circle cx="12" cy="12" r="10"/></svg>',
   wallet: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>',
+  x: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.41l-5.8-7.58-6.64 7.58H.47l8.6-9.83L0 1.15h7.59l5.24 6.93zm-1.29 19.5h2.04L6.49 3.24H4.3z"/></svg>',
+  tg: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 2.3 1.6 10.16c-1.4.56-1.39 1.33-.25 1.68l5.22 1.63 12.07-7.61c.57-.35 1.09-.16.66.22l-9.77 8.83-.36 5.26c.53 0 .76-.24 1.06-.53l2.55-2.48 5.3 3.92c.98.54 1.68.26 1.92-.9l3.48-16.4c.36-1.43-.55-2.08-1.48-1.66z"/></svg>',
+  discord: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.6 1.25a18.27 18.27 0 0 0-5.49 0 12.6 12.6 0 0 0-.61-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.88 1.52.07.07 0 0 0-.04.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.05 19.9 19.9 0 0 0 6 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.22-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1-.01-.13l.37-.29a.07.07 0 0 1 .08-.01 14.2 14.2 0 0 0 12.06 0 .07.07 0 0 1 .08.01l.37.29c.05.04.04.1-.01.13-.6.35-1.22.64-1.87.9a.08.08 0 0 0-.04.11c.36.7.77 1.37 1.22 2a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6.02-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.68-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.95-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42z"/></svg>',
+  globe: '<svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
   flame: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
 };
 
@@ -142,9 +146,15 @@ async function fetchLogos() {
           if (url) TOKEN_LOGOS.set(ca, url);
         }
       }
+      if (data.success && data.socials) {
+        for (const [ca, soc] of Object.entries(data.socials)) {
+          if (soc && Object.keys(soc).length) TOKEN_SOCIALS.set(ca, soc);
+        }
+      }
     } catch (e) { /* logos are cosmetic — stay silent */ }
   }
   applyLogos();
+  applySocials();
 }
 
 function applyLogos() {
@@ -161,6 +171,29 @@ function applyLogos() {
     img.loading = 'lazy';
     img.onerror = () => { img.remove(); holder.classList.add(avatarTone(holder.dataset.ca)); };
     holder.appendChild(img);
+  }
+}
+
+function socialsHTML(ca) {
+  const soc = TOKEN_SOCIALS.get(ca);
+  if (!soc) return '';
+  const links = [];
+  if (soc.twitter) links.push(`<a class="soc-link" href="${esc(soc.twitter)}" target="_blank" rel="noopener" title="X / Twitter" onclick="event.stopPropagation()">${I.x}</a>`);
+  if (soc.telegram) links.push(`<a class="soc-link" href="${esc(soc.telegram)}" target="_blank" rel="noopener" title="Telegram" onclick="event.stopPropagation()">${I.tg}</a>`);
+  if (soc.discord) links.push(`<a class="soc-link" href="${esc(soc.discord)}" target="_blank" rel="noopener" title="Discord" onclick="event.stopPropagation()">${I.discord}</a>`);
+  if (soc.website) links.push(`<a class="soc-link" href="${esc(soc.website)}" target="_blank" rel="noopener" title="Website" onclick="event.stopPropagation()">${I.globe}</a>`);
+  return links.length ? links.join('') : '';
+}
+
+function applySocials() {
+  for (const { root, refs } of state.cardRefs.values()) {
+    const holder = refs.socials;
+    if (!holder || holder.dataset.done === '1') continue;
+    const html = socialsHTML(root.dataset.ca);
+    if (html) {
+      holder.innerHTML = html;
+      holder.dataset.done = '1';
+    }
   }
 }
 
@@ -294,9 +327,11 @@ function buildSignalCard(sig) {
           <div class="sig-meta-row">
             <span class="chip" data-ref="strategy">${esc(sig.strategy || 'Ponyin Quant')}</span>
             ${sig.tier_label ? `<span class="chip chip-cyan" data-ref="tier">${esc(sig.tier_label)}</span>` : ''}
+            <span class="chip chip-cyan cto-chip" data-ref="cto" style="display:none">📢 CTO</span>
             <span class="dot-sep">•</span>
             <span class="sig-age" data-ref="age" title="${esc(sig.created_at || '')}"></span>
           </div>
+          <div class="sig-socials" data-ref="socials"></div>
         </div>
       </div>
       <div class="sig-price-block">
@@ -381,6 +416,9 @@ function updateSignalCard(sig) {
   refs.scoreNum.textContent = score.toFixed(0);
   refs.scoreNum.style.color = scoreColor(score);
 
+  // cto badge
+  if (refs.cto) refs.cto.style.display = sig.cto ? '' : 'none';
+
   // sparkline
   refs.spark.innerHTML = sparklineSVG(sig.ca);
 }
@@ -450,66 +488,94 @@ function renderActivePositions() {
   const list = state.activePositions;
   document.getElementById('posBadge').textContent = list.length;
 
-  const sig = list.map(p => p.id).join('|');
-  if (sig === state.activePosSig && list.length > 0) { updateActivePositions(); return; }
-  state.activePosSig = sig;
-
-  if (list.length === 0) {
-    el.innerHTML = `
-      <div class="empty-state">
-        <div class="orb">${I.chart}</div>
-        <div class="title">Tidak ada posisi aktif</div>
-        <div class="hint">Modal sandbox siap 100%. Entry baru akan tampil di sini secara real-time dengan PnL live.</div>
-      </div>`;
-    return;
+  // remove stale cards
+  const wanted = new Set(list.map(p => p.id));
+  for (const [id, entry] of posRefs) {
+    if (!wanted.has(id)) { entry.root.remove(); posRefs.delete(id); }
   }
 
-  el.innerHTML = list.map(pos => {
-    const pnl = pnlOf(pos);
-    const win = pnl >= 0;
-    const live = parseFloat(pos.current_price_usd) || 0;
-    const peak = parseFloat(pos.peak_multiplier) || 1;
-    return `
-    <div class="pos-card" onclick="openChartModal('${esc(pos.token_ca)}', '${esc(pos.symbol)}', '', '${live}')">
-      <div class="pos-row1">
-        <div class="pos-token">
-          <div class="token-avatar ${avatarTone(pos.token_ca || '')}" style="width:28px;height:28px;font-size:10px;border-radius:8px">${esc((pos.symbol || '?').slice(0, 3).toUpperCase())}</div>
-          <div>
-            <span class="pos-symbol">$${esc(pos.symbol)}</span>
-            <span class="pos-sol">· ${fmtSol(pos.sol_spent, 3)} SOL</span>
-          </div>
-        </div>
-        <div class="pos-pnl" style="color:${win ? 'var(--green)' : 'var(--red)'}">
-          <span class="arrow">${win ? '▲' : '▼'}</span>${win ? '+' : ''}${pnl.toFixed(2)}%
+  const emptyEl = el.querySelector('.empty-state');
+  if (list.length === 0) {
+    if (posRefs.size === 0 && !emptyEl) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="orb">${I.chart}</div>
+          <div class="title">Tidak ada posisi aktif</div>
+          <div class="hint">Modal sandbox siap 100%. Entry baru akan tampil di sini secara real-time dengan PnL live.</div>
+        </div>`;
+    }
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+
+  // create missing cards (newest first)
+  let anyNew = false;
+  for (const pos of list) {
+    if (!posRefs.has(pos.id)) {
+      el.prepend(buildPositionCard(pos));
+      anyNew = true;
+    }
+  }
+  if (anyNew) queueLogoFetch();
+
+  // update existing cards in place — no rebuild, no animation replay (fixes blink)
+  for (const pos of list) updatePositionCard(pos);
+}
+
+const posRefs = new Map();   // id -> {root, refs, pos}
+
+function buildPositionCard(pos) {
+  const root = document.createElement('div');
+  root.className = 'pos-card';
+  root.dataset.pid = pos.id;
+  root.innerHTML = `
+    <div class="pos-row1">
+      <div class="pos-token">
+        ${avatarHTML(pos.token_ca || '', pos.symbol, 'width:28px;height:28px;font-size:10px;border-radius:8px')}
+        <div>
+          <span class="pos-symbol">$${esc(pos.symbol)}</span>
+          <span class="pos-sol">· ${fmtSol(pos.sol_spent, 3)} SOL</span>
         </div>
       </div>
-      <div class="pos-grid">
-        <div class="cell"><div class="k">Live</div><div class="v">$${fmtPrice(pos.current_price_usd)}</div></div>
-        <div class="cell"><div class="k">MCap</div><div class="v">${fmtUSD(pos.current_mcap)}</div></div>
-        <div class="cell"><div class="k">Peak</div><div class="v" style="color:var(--cyan)">${peak.toFixed(2)}x</div></div>
-        <div class="cell"><div class="k">Score</div><div class="v" style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</div></div>
-      </div>
-      <div class="pos-foot">
-        <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
-        <div style="display:flex;align-items:center;gap:9px">
-          <span class="sig-age">${relTime(parseTs(pos.created_at))}</span>
-          <button class="btn btn-danger" onclick="event.stopPropagation();openTradeModal({action:'sell', positionId:${pos.id}, symbol:'${esc(pos.symbol)}', tokenCa:'${esc(pos.token_ca)}', tokensRemaining:${parseFloat(pos.tokens_remaining) || 0}, entryPrice:${parseFloat(pos.entry_price_usd) || 0}, currentPrice:${parseFloat(pos.current_price_usd) || 0}, solSpent:${parseFloat(pos.sol_spent) || 0}})">Jual</button>
-        </div>
+      <div class="pos-pnl" data-ref="pnl">—</div>
+    </div>
+    <div class="pos-grid">
+      <div class="cell"><div class="k">Live</div><div class="v" data-ref="price">—</div></div>
+      <div class="cell"><div class="k">MCap</div><div class="v" data-ref="mcap">—</div></div>
+      <div class="cell"><div class="k">Peak</div><div class="v" style="color:var(--cyan)" data-ref="peak">—</div></div>
+      <div class="cell"><div class="k">Score</div><div class="v" style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</div></div>
+    </div>
+    <div class="pos-foot">
+      <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
+      <div style="display:flex;align-items:center;gap:9px">
+        <span class="sig-age" data-ref="age"></span>
+        <button class="btn btn-danger" onclick="event.stopPropagation();openTradeModal({action:'sell', positionId:${pos.id}, symbol:'${esc(pos.symbol)}', tokenCa:'${esc(pos.token_ca)}', tokensRemaining:${parseFloat(pos.tokens_remaining) || 0}, entryPrice:${parseFloat(pos.entry_price_usd) || 0}, currentPrice:${parseFloat(pos.current_price_usd) || 0}, solSpent:${parseFloat(pos.sol_spent) || 0}})">Jual</button>
       </div>
     </div>`;
-  }).join('');
+
+  const refs = {};
+  root.querySelectorAll('[data-ref]').forEach(el => { refs[el.dataset.ref] = el; });
+  root.addEventListener('click', () => openChartModal(pos.token_ca, pos.symbol, '', pos.current_price_usd));
+
+  const entry = { root, refs, pos };
+  posRefs.set(pos.id, entry);
+  return root;
 }
 
-function updateActivePositions() {
-  // lightweight refresh of price-dependent cells
-  renderActivePositionsForce();
-}
+function updatePositionCard(pos) {
+  const entry = posRefs.get(pos.id);
+  if (!entry) return;
+  entry.pos = pos;
+  const pnl = pnlOf(pos);
+  const win = pnl >= 0;
+  const peak = parseFloat(pos.peak_multiplier) || 1;
 
-function renderActivePositionsForce() {
-  const keep = state.activePosSig;
-  state.activePosSig = '';
-  renderActivePositions();
-  state.activePosSig = keep;
+  entry.refs.pnl.innerHTML = `<span class="arrow">${win ? '▲' : '▼'}</span>${win ? '+' : ''}${pnl.toFixed(2)}%`;
+  entry.refs.pnl.style.color = win ? 'var(--green)' : 'var(--red)';
+  entry.refs.price.textContent = '$' + fmtPrice(pos.current_price_usd);
+  entry.refs.mcap.textContent = fmtUSD(pos.current_mcap);
+  entry.refs.peak.textContent = peak.toFixed(2) + 'x';
+  entry.refs.age.textContent = relTime(parseTs(pos.created_at));
 }
 
 function renderHistory() {
@@ -719,6 +785,72 @@ function setConn(mode) {
   connPill.title = mode === 'live' ? 'Terhubung ke engine (tick 200ms)' : mode === 'connecting' ? 'Menyambungkan ke engine...' : 'Koneksi engine terputus. Klik untuk mencoba lagi.';
 }
 
+/* ---------------- Top-center mini notification bar ---------------- */
+
+function showMiniBar({ icon, color, title, sub, ca, symbol }) {
+  const zone = document.getElementById('miniBars');
+  if (!zone) return;
+  while (zone.children.length >= 3) zone.firstChild.remove();
+  const bar = document.createElement('div');
+  bar.className = 'mini-bar';
+  bar.style.borderLeftColor = color;
+  bar.innerHTML = `
+    <span class="mb-icon">${icon}</span>
+    <div class="mb-body"><b>${esc(title)}</b><span>${esc(sub)}</span></div>
+    <button class="mb-close" aria-label="Tutup">✕</button>`;
+  const dismiss = () => { bar.classList.remove('in'); setTimeout(() => bar.remove(), 300); };
+  bar.addEventListener('click', e => {
+    if (e.target.closest('.mb-close')) { dismiss(); return; }
+    openChartModal(ca, symbol, '', '');
+    dismiss();
+  });
+  zone.appendChild(bar);
+  requestAnimationFrame(() => bar.classList.add('in'));
+  setTimeout(dismiss, 8000);
+}
+
+/* Pump milestones: notify when an OPEN signal crosses 1.5x / 2x / 3x / 5x
+   from entry. First sighting of a token is the silent baseline. */
+const PUMP_LEVELS = [1.5, 2, 3, 5];
+const pumpSeen = new Map();
+const ctoSeen = new Map();
+
+function checkPumpAndCto() {
+  for (const s of state.signals) {
+    if (!s || !s.ca) continue;
+    const isOpen = (s.status || 'OPEN').toUpperCase() === 'OPEN';
+
+    if (isOpen) {
+      const mult = multOf(s);
+      const level = PUMP_LEVELS.filter(l => mult >= l).pop() || 0;
+      if (!pumpSeen.has(s.ca)) {
+        pumpSeen.set(s.ca, level);          // baseline: already-past levels stay silent
+      } else if (level > pumpSeen.get(s.ca)) {
+        pumpSeen.set(s.ca, level);
+        showMiniBar({
+          icon: '🚀', color: 'var(--lime)',
+          title: `$${s.symbol} melesat ${level}x dari entry!`,
+          sub: `Sekarang ${mult.toFixed(2)}x (+${((mult - 1) * 100).toFixed(0)}%) · MC ${fmtUSD(s.current_mcap)}`,
+          ca: s.ca, symbol: s.symbol
+        });
+      }
+    }
+
+    const cto = !!s.cto;
+    if (!ctoSeen.has(s.ca)) {
+      ctoSeen.set(s.ca, cto);
+    } else if (cto && !ctoSeen.get(s.ca)) {
+      ctoSeen.set(s.ca, true);
+      showMiniBar({
+        icon: '📢', color: 'var(--cyan)',
+        title: `$${s.symbol} CTO — Community Takeover!`,
+        sub: 'On-chain: likuiditas sehat, mcap bangkit >= +40% dari dasar, volume hidup',
+        ca: s.ca, symbol: s.symbol
+      });
+    }
+  }
+}
+
 function applyPayload(data) {
   state.lastTickAt = Date.now();
 
@@ -739,6 +871,7 @@ function applyPayload(data) {
   renderPortfolio(false);
   renderRecap();
   if (currentPage === 'recap') { renderEnginePerformance(); renderMilestones(); }
+  checkPumpAndCto();
   renderStats();
 }
 
