@@ -1051,6 +1051,77 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 .engine-report summary:hover { color: var(--text-1); }
 .engine-report .recap-box { border: 0; border-radius: 0; border-top: 1px solid var(--border-1); }
 
+/* ==========================================================================
+   Engine-style performance recap (/recap)
+   ========================================================================== */
+
+.engine-tree {
+  font-size: 13.5px;
+  line-height: 2.1;
+  color: var(--text-2);
+  overflow-x: auto;
+}
+
+.tree-title { font-size: 15px; font-weight: 800; color: var(--text-1); }
+.tree-title b { color: var(--lime); }
+.tree-section { font-weight: 800; color: var(--text-1); margin-top: 4px; }
+.tree-line { white-space: nowrap; }
+.tree-line b { color: var(--text-1); font-variant-numeric: tabular-nums; }
+.tree-line b.up { color: var(--green); }
+.tree-line b.down { color: var(--red); }
+.tree-line b.lime, .tree-line .lime { color: var(--lime); }
+.tree-line b.dimc, .tree-line .dimc, .tree-line .dim { color: var(--text-4); }
+.tree-line .dim { font-weight: 400; }
+.tree-gap { height: 8px; }
+
+.wr-bar {
+  display: inline-block;
+  vertical-align: middle;
+  width: 160px;
+  height: 6px;
+  margin-left: 12px;
+  background: rgba(255, 84, 112, 0.35);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.wr-bar > i { display: block; height: 100%; background: var(--green); }
+
+.bench-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.bench-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bench-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(199, 242, 132, 0.55), transparent 75%);
+}
+
+.bench-name { font-size: 11px; font-weight: 700; color: var(--text-2); }
+.bench-val { font-size: 24px; font-weight: 800; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.bench-val-sm { font-size: 15px; letter-spacing: 0.02em; }
+.bench-bench { font-size: 10px; color: var(--text-4); }
+.bench-status { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
+.bench-status.up { color: var(--green); }
+.bench-status.down { color: var(--red); }
+.bench-status.dim { color: var(--text-4); }
+
 
 /* ==========================================================================
    KPI Strip

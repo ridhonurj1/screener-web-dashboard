@@ -21,6 +21,12 @@ Real-time Web Dashboard untuk **ScreenerNantiAja** (Solana Quant Screener & Auto
 - **Kontrol Automasi** — status radar scanner & paper exit loop (selalu aktif), toggle **Auto-Buy On-Chain** untuk mode riil otomatis, plus parameter default buy & slippage.
 - **Posisi & Riwayat** — panel posisi aktif dengan PnL live, riwayat trade lengkap (R-multiple, hold duration, hasil TP/SL).
 
+### Halaman Dedicated
+- `/` **Terminal** — radar sinyal live + panel posisi/riwayat.
+- `/portofolio` — **kurva PnL kumulatif** (anchor 0 SOL) dengan ruler Y-axis, sumbu waktu, crosshair + tooltip per trade, baseline modal, titik terakhir berdenyut, plus ledger semua transaksi.
+- `/evaluasi` — evaluasi kinerja paper trading: kartu statistik (net PnL, profit factor, best/worst), tabel per token, insight periode.
+- `/recap` — **Performance Recap & Winrate Tracking** format identik Topic #6 engine: tree `[📊] Ponyin Recap` → `[📈] Stats & Performance` (Total/Win/Lose/In Play/Winrate/Top ATH), benchmark **Hedge Fund Grade** (Realized Avg R vs ≥ +0.40R, Profit Factor vs ≥ 1.75), jam UTC dual-precision milidetik, dan tabel `[📋] Recent Signals` dengan link GMGN.
+
 ### Wallet & Smart Money
 - **Tab Portofolio** — saldo besar, **kurva pergerakan saldo** (ledger replay semua transaksi), 6 statistik portofolio (total transaksi, win rate, posisi terbuka, nilai posisi, volume, realized PnL), dan **riwayat transaksi** lengkap (BUY/SELL/TP/SL) dengan saldo setelah tiap event.
 - **Evaluasi Kinerja Terstruktur** — kartu statistik (net PnL, profit factor, trade terbaik/terburuk), **tabel kinerja per token**, insight naratif, plus laporan teks resmi engine dalam collapsible.

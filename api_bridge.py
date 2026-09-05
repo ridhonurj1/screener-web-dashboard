@@ -144,7 +144,12 @@ def compute_engine_health():
 # --- REST APIS (READ FROM MEMORY < 1MS) ---
 
 async def api_signals(request):
-    return web.json_response({"success": True, "count": len(in_memory_state["signals"]), "data": in_memory_state["signals"]})
+    try:
+        limit = min(max(int(request.query.get("limit", "40")), 1), 1000)
+    except Exception:
+        limit = 40
+    data = in_memory_state["signals"][:limit]
+    return web.json_response({"success": True, "count": len(data), "data": data})
 
 async def api_positions(request):
     return web.json_response({

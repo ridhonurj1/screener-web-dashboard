@@ -621,6 +621,7 @@ function applyPayload(data) {
   renderHistory();
   renderPortfolio(false);
   renderRecap();
+  if (currentPage === 'recap') renderEnginePerformance();
   renderStats();
 }
 
@@ -785,7 +786,6 @@ function emptyStateHTML(icon, title, hint) {
 /* ---------------- Recap (structured performance report) ---------------- */
 
 let recapPeriod = 'daily';
-let engineRecapCache = {};
 
 function closedInPeriod(days) {
   if (!days) return state.closedPositions.slice();
@@ -874,24 +874,6 @@ document.getElementById('recapTabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tf]');
   if (btn) setRecapPeriod(btn.dataset.tf);
 });
-
-async function loadEngineRecap(tf) {
-  const box = document.getElementById('recapContentBox');
-  if (engineRecapCache[tf]) { box.textContent = engineRecapCache[tf]; return; }
-  box.textContent = 'Memuat laporan engine...';
-  try {
-    const res = await fetch(`/api/recap?timeframe=${tf}`);
-    const data = await res.json();
-    if (data.success && data.recap_html) {
-      engineRecapCache[tf] = data.recap_html;
-      box.textContent = data.recap_html;
-    } else {
-      box.textContent = data.error ? `Laporan engine tidak tersedia: ${data.error}` : 'Belum ada laporan engine untuk periode ini.';
-    }
-  } catch (e) {
-    box.textContent = `Gagal memuat: ${e.message}`;
-  }
-}
 
 /* ---------------- Portfolio tab ---------------- */
 
@@ -1618,13 +1600,128 @@ function activatePage() {
   document.querySelectorAll('.pagenav a').forEach(a => a.classList.toggle('active', a.dataset.nav === currentPage));
 }
 
+/* ---------------- Recap page: engine-style Performance Recap ---------------- */
+
 let engineTf = 'daily';
+let recapSignals = [];
+let engineSig = '';
+
+function engineOutcome(s) {
+  const peak = parseFloat(s.peak_multiplier) || 1.0;
+  const cur = parseFloat(s.current_multiplier) || 1.0;
+  if (s.outcome === '✅ WIN' || peak >= 1.5) return 'win';
+  if (s.outcome === '❌ LOSE' || (cur <= 0.7 && peak < 1.3)) return 'lose';
+  return 'running';
+}
+
+async function fetchRecapSignals() {
+  try {
+    const res = await fetch('/api/signals?limit=500');
+    const data = await res.json();
+    if (data.success && Array.isArray(data.data)) {
+      recapSignals = data.data;
+      renderEnginePerformance();
+    }
+  } catch (e) { /* non-critical */ }
+}
+
+function renderEnginePerformance(force) {
+  const tree = document.getElementById('recapTree');
+  if (!tree) return;
+  const sig = engineTf + '|' + recapSignals.map(s => s.id).join(',') + '|' + state.closedPositions.map(c => c.id).join(',');
+  if (!force && sig === engineSig) return;
+  engineSig = sig;
+
+  const days = { daily: 1, weekly: 7, monthly: 30, all: 0 }[engineTf] || 0;
+  const cutoff = days ? Date.now() - days * 86400e3 : 0;
+  let list = recapSignals.filter(s => (parseTs(s.created_at) || 0) >= cutoff);
+  let suffix = '';
+  if (list.length === 0 && recapSignals.length) { list = recapSignals; suffix = ' <span class="dim">[Seluruh Data Aktif]</span>'; }
+  const label = { daily: 'DAILY (24 Jam Terakhir)', weekly: 'WEEKLY (7 Hari Terakhir)', monthly: 'MONTHLY (30 Hari Terakhir)', all: 'ALL-TIME' }[engineTf];
+
+  const wins = list.filter(s => engineOutcome(s) === 'win').length;
+  const losses = list.filter(s => engineOutcome(s) === 'lose').length;
+  const running = list.length - wins - losses;
+  const wr = (wins + losses) > 0 ? (wins / (wins + losses)) * 100 : 0;
+  const best = list.length ? list.reduce((a, b) => (parseFloat(b.peak_multiplier) || 0) > (parseFloat(a.peak_multiplier) || 0) ? b : a) : null;
+
+  // Hedge-fund benchmark metrics from closed paper trades (Realized Avg R & PF)
+  const rs = state.closedPositions.map(c => parseFloat(c.r_result)).filter(r => isFinite(r));
+  const avgR = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null;
+  const nets = state.closedPositions.map(netOf);
+  const gw = nets.filter(n => n > 0).reduce((a, b) => a + b, 0);
+  const gl = Math.abs(nets.filter(n => n < 0).reduce((a, b) => a + b, 0));
+  const pf = gl > 0 ? gw / gl : (gw > 0 ? Infinity : null);
+
+  const now = new Date();
+  const utc = now.toISOString().slice(0, 19).replace('T', ' ');
+
+  tree.innerHTML = `
+    <div class="tree-title">[📊] Ponyin <b>${label}</b> Recap${suffix}</div>
+    <div class="tree-line dim">🕒 Timestamp: ${utc} UTC</div>
+    <div class="tree-gap"></div>
+    <div class="tree-section">[📈] Stats &amp; Performance</div>
+    <div class="tree-line">├─ Total: <b>${list.length} Pairs</b></div>
+    <div class="tree-line">├─ Win: <b class="up">${wins}</b> | Lose: <b class="down">${losses}</b> | In Play: <b class="dimc">${running}</b></div>
+    <div class="tree-line">├─ Winrate: <b class="lime">${wr.toFixed(1)}%</b>${list.length ? `<span class="wr-bar"><i style="width:${wr}%"></i></span>` : ''}</div>
+    <div class="tree-line">└─ Top ATH: ${best ? `<b class="lime">$${esc(best.symbol)}</b> (<b>${(parseFloat(best.peak_multiplier) || 0).toFixed(2)}x</b>)` : '—'}</div>`;
+
+  // benchmark cards
+  const setBench = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const setCls = (id, cls) => { const el = document.getElementById(id); if (el) el.className = 'bench-status mono ' + cls; };
+  setBench('benchR', avgR === null ? '—' : `${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R`);
+  setBench('benchRStatus', avgR === null ? 'DATA BELUM CUKUP' : avgR >= 0.4 ? 'PASS ✅ DI ATAS STANDAR' : 'BELOW ❌ DI BAWAH STANDAR');
+  setCls('benchRStatus', avgR === null ? 'dim' : avgR >= 0.4 ? 'up' : 'down');
+  setBench('benchPF', pf === null ? '—' : pf === Infinity ? '∞' : pf.toFixed(2));
+  setBench('benchPFStatus', pf === null ? 'DATA BELUM CUKUP' : pf >= 1.75 ? 'PASS ✅ DI ATAS STANDAR' : 'BELOW ❌ DI BAWAH STANDAR');
+  setCls('benchPFStatus', pf === null ? 'dim' : pf >= 1.75 ? 'up' : 'down');
+
+  // recent signals table (5 terakhir, newest first)
+  const tbody = document.querySelector('#recentSignalsTable tbody');
+  const empty = document.getElementById('recentSignalsEmpty');
+  const recent = list.slice(-5).reverse();
+  if (!recent.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    document.getElementById('recentSignalsTable').classList.add('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  document.getElementById('recentSignalsTable').classList.remove('hidden');
+  tbody.innerHTML = recent.map(s => {
+    const out = engineOutcome(s);
+    const ocls = out === 'win' ? 'win' : out === 'lose' ? 'loss' : 'flat';
+    const olbl = out === 'win' ? '✅ WIN' : out === 'lose' ? '❌ LOSE' : '⏳ RUNNING';
+    const pnl = parseFloat(s.current_pnl_pct) || 0;
+    const peak = parseFloat(s.peak_multiplier) || 1.0;
+    const strat = String(s.strategy || 'General');
+    return `
+    <tr>
+      <td class="num" style="color:var(--text-4)">#${esc(String(s.id ?? 'SIG'))}</td>
+      <td class="sym-cell"><a href="https://gmgn.ai/sol/token/${esc(s.ca)}" target="_blank" rel="noopener" style="color:var(--lime);text-decoration:none">$${esc(s.symbol)}</a></td>
+      <td><span class="hist-result ${ocls}">${olbl}</span></td>
+      <td class="num">${fmtUSD(s.entry_mcap)} → ${fmtUSD(s.current_mcap)}</td>
+      <td class="num" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%</td>
+      <td class="num" style="color:var(--cyan)">${peak.toFixed(2)}x</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(strat)}</td>
+    </tr>`;
+  }).join('');
+}
+
+setInterval(() => {
+  const el = document.getElementById('benchClock');
+  if (el && currentPage === 'recap') {
+    const n = new Date();
+    el.textContent = `${n.toISOString().slice(0, 19).replace('T', ' ')}.${String(n.getMilliseconds()).padStart(3, '0')} UTC`;
+  }
+}, 53);
+
 document.getElementById('engineTabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tf]');
   if (!btn) return;
   engineTf = btn.dataset.tf;
   document.querySelectorAll('#engineTabs button').forEach(b => b.classList.toggle('active', b === btn));
-  loadEngineRecap(engineTf);
+  renderEnginePerformance(true);
 });
 
 /* ---------------- Boot ---------------- */
@@ -1632,7 +1729,7 @@ document.getElementById('engineTabs').addEventListener('click', e => {
 activatePage();
 if (currentPage === 'portofolio') renderPortfolio(true);
 if (currentPage === 'evaluasi') renderRecap(true);
-if (currentPage === 'recap') loadEngineRecap(engineTf);
+if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); }
 
 httpBootstrap();
 connectWS();

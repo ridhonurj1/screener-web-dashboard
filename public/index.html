@@ -227,13 +227,13 @@
       </div>
     </main>
 
-    <!-- ==================== PAGE: RECAP (LAPORAN ENGINE) ==================== -->
+    <!-- ==================== PAGE: RECAP (PERFORMANCE ENGINE) ==================== -->
     <main class="page hidden" id="pageRecap">
       <div class="page-inner">
         <div class="page-head">
           <div>
-            <h1 class="page-title">Recap Resmi Engine</h1>
-            <p class="page-sub">Laporan rekapitulasi text-native dari modul evaluasi Ponyin v5.</p>
+            <h1 class="page-title">Performance Recap &amp; Winrate Tracking</h1>
+            <p class="page-sub">Format identik dengan Topic #6 engine — Ponyin v5 · dihitung dari sinyal screener.</p>
           </div>
           <div class="recap-tabs" id="engineTabs" style="min-width:340px">
             <button data-tf="daily" class="active">24 Jam</button>
@@ -242,10 +242,52 @@
             <button data-tf="all">All-Time</button>
           </div>
         </div>
+
+        <!-- [📈] Stats & Performance — tree gaya engine -->
         <section class="page-card">
-          <div id="recapContentBox" class="recap-box" style="min-height:280px">Memuat laporan engine...</div>
+          <div class="engine-tree mono" id="recapTree">Memuat...</div>
         </section>
-        <p class="page-foot-hint">Laporan ini dihasilkan modul <span class="mono">compact_evaluator</span> di sisi engine. Untuk analisis tabel &amp; grafik, gunakan halaman <a href="/evaluasi" style="color:var(--lime)">Evaluasi</a>.</p>
+
+        <!-- Benchmark Hedge Fund Grade -->
+        <div class="bench-grid" id="benchGrid">
+          <div class="bench-card">
+            <div class="bench-name">🧮 Realized Avg R</div>
+            <div class="bench-val mono" id="benchR">—</div>
+            <div class="bench-bench">Standar institusi: ≥ +0.40R</div>
+            <div class="bench-status mono" id="benchRStatus">—</div>
+          </div>
+          <div class="bench-card">
+            <div class="bench-name">🧮 Profit Factor</div>
+            <div class="bench-val mono" id="benchPF">—</div>
+            <div class="bench-bench">Standar prop-firm: ≥ 1.75</div>
+            <div class="bench-status mono" id="benchPFStatus">—</div>
+          </div>
+          <div class="bench-card">
+            <div class="bench-name">🕒 Format Waktu Engine</div>
+            <div class="bench-val mono bench-val-sm" id="benchClock">—</div>
+            <div class="bench-bench">Dual precision · UTC</div>
+            <div class="bench-status mono dim">LIVE</div>
+          </div>
+        </div>
+
+        <!-- [📋] Recent Signals -->
+        <section class="page-card">
+          <div class="drawer-section-title"><span>[📋] Recent Signals</span><span class="sub">5 terakhir · sesuai format engine</span></div>
+          <div class="table-wrap">
+            <table class="data-table" id="recentSignalsTable">
+              <thead>
+                <tr><th>ID</th><th>Token</th><th>Outcome</th><th class="num">MC Entry → Live</th><th class="num">PnL</th><th class="num">Peak ATH</th><th>Strat</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="recentSignalsEmpty" class="empty-state hidden">
+              <div class="orb"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+              <div class="title">Belum ada sinyal pada periode ini</div>
+            </div>
+          </div>
+        </section>
+
+        <p class="page-foot-hint">Win mengikuti aturan engine: <span class="mono">peak ≥ 1.5x</span> atau outcome ✅ · Lose: <span class="mono">current ≤ 0.7x &amp; peak &lt; 1.3x</span>. Laporan teks asli engine tersedia di server melalui <a href="/evaluasi" style="color:var(--lime)">Evaluasi</a>.</p>
       </div>
     </main>
 
