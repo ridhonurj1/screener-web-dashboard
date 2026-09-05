@@ -585,6 +585,218 @@ input, select { font-family: inherit; }
   object-fit: cover;
 }
 
+/* ==========================================================================
+   Portfolio tab
+   ========================================================================== */
+
+.pf-head { text-align: center; padding: 6px 0 2px; }
+
+.pf-balance {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.pf-balance .unit { font-size: 13px; color: var(--text-3); font-weight: 600; margin-left: 4px; }
+
+.pf-balance-sub { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+.pf-balance-sub b.up { color: var(--green); }
+.pf-balance-sub b.down { color: var(--red); }
+
+.pf-chart {
+  position: relative;
+  background: var(--bg-0);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-lg);
+  padding: 10px 8px 6px;
+  overflow: hidden;
+}
+
+.pf-chart svg { display: block; width: 100%; height: 120px; }
+.pf-chart .gridline { stroke: var(--border-1); stroke-width: 1; }
+.pf-chart .line { fill: none; stroke: url(#pfGrad); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.pf-chart .area { opacity: 0.16; }
+.pf-chart .last-dot { fill: var(--lime); }
+
+.pf-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-4);
+  padding: 4px 4px 0;
+}
+
+.pf-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pf-stat {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  padding: 9px 11px;
+}
+
+.pf-stat .v {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-stat .k { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-4); margin-top: 2px; }
+
+.pf-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding-top: 4px;
+}
+
+/* Ledger (transaction history) */
+.ledger { display: flex; flex-direction: column; gap: 6px; }
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  padding: 8px 11px;
+}
+
+.ledger-type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 7px;
+  border-radius: var(--r-sm);
+  border: 1px solid;
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: center;
+}
+
+.ledger-type.buy { color: var(--lime); border-color: var(--lime-border); background: var(--lime-dim); }
+.ledger-type.sell { color: var(--cyan); border-color: var(--cyan-border); background: var(--cyan-dim); }
+.ledger-type.tp { color: var(--green); border-color: var(--green-border); background: var(--green-dim); }
+.ledger-type.sl { color: var(--red); border-color: var(--red-border); background: var(--red-dim); }
+
+.ledger-main { min-width: 0; flex: 1; }
+.ledger-sym { font-size: 12px; font-weight: 800; }
+.ledger-sub { font-family: var(--font-mono); font-size: 9.5px; color: var(--text-4); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ledger-right { text-align: right; flex-shrink: 0; }
+.ledger-amt { font-family: var(--font-mono); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ledger-bal { font-family: var(--font-mono); font-size: 9.5px; color: var(--text-4); font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   Recap stats & tables
+   ========================================================================== */
+
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.rc-stat {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.rc-stat .v {
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-stat .k { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-4); margin-top: 2px; }
+.rc-stat .v.up { color: var(--green); }
+.rc-stat .v.down { color: var(--red); }
+.rc-stat .v.dim { color: var(--text-1); }
+
+.table-wrap { overflow-x: auto; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--border-2);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--border-1);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table tbody tr { transition: background var(--t-fast); }
+.data-table tbody tr:hover { background: var(--bg-2); }
+.data-table .num { text-align: right; font-family: var(--font-mono); }
+.data-table td.num { font-family: var(--font-mono); font-weight: 700; color: var(--text-1); }
+.data-table .sym-cell { font-weight: 800; color: var(--text-1); }
+
+.engine-report {
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+
+.engine-report summary {
+  cursor: pointer;
+  padding: 10px 13px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-3);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.engine-report summary::before {
+  content: '▸';
+  color: var(--lime);
+  transition: transform var(--t-fast);
+}
+
+.engine-report[open] summary::before { transform: rotate(90deg); }
+.engine-report summary:hover { color: var(--text-1); }
+.engine-report .recap-box { border: 0; border-radius: 0; border-top: 1px solid var(--border-1); }
+
 
 /* ==========================================================================
    KPI Strip
@@ -742,6 +954,9 @@ input, select { font-family: inherit; }
   flex-direction: column;
   gap: 10px;
 }
+
+/* scrollable flex column: children must keep intrinsic height, never compress */
+.panel-body > * { flex-shrink: 0; }
 
 /* Toolbar (filters + sort) */
 .toolbar {
@@ -1608,12 +1823,35 @@ input, select { font-family: inherit; }
   .brand .chip { display: none; }
   .auto-chip { display: none; }
   .conn-pill { padding: 5px 8px; }
-  .header { padding: 0 12px; }
+  .header { padding: 0 12px; gap: 8px; }
+  .brand { min-width: 0; }
+  .brand-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-right { gap: 7px; }
+  .wallet-badge { max-width: 108px; overflow: hidden; }
+  .wallet-badge span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .main { padding: 10px 12px; }
   .kpi-strip { padding: 10px 12px 0; }
   .statusbar { padding: 0 12px; gap: 8px; }
   .sb-right, .sb-brand span, .sb-brand .sb-sep { display: none; }
   .sb-item { padding: 0 9px; }
+  .sb-item .sb-k { display: none; }
+  /* cards adapt to narrow widths */
+  .sig-metrics { grid-template-columns: repeat(2, 1fr); }
+  .pos-grid { grid-template-columns: repeat(2, 1fr); }
+  .panel-head .hint { display: none; }
+  .side-tab { padding: 8px 10px 10px; font-size: 11px; gap: 5px; }
+  .toolbar { flex-wrap: wrap; }
+  .kpi-value { font-size: 16px; }
+  .pf-balance { font-size: 24px; }
+  .pf-stats, .recap-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 420px) {
+  .sig-symbol-row .name { max-width: 80px; }
+  .metric { padding: 6px 8px; }
+  .metric .v { font-size: 11px; }
+  .drawer { width: 100vw; max-width: 100vw; }
+  .sb-metrics { overflow-x: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

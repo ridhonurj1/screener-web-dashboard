@@ -141,11 +141,15 @@
         <div class="side-tabs" role="tablist">
           <button class="side-tab active" id="sideTabOpen" data-tab="open" role="tab">
             <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            Posisi Aktif <span class="count" id="posBadge">0</span>
+            Posisi <span class="count" id="posBadge">0</span>
           </button>
           <button class="side-tab" id="sideTabHistory" data-tab="history" role="tab">
             <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             Riwayat <span class="count" id="histBadge">0</span>
+          </button>
+          <button class="side-tab" id="sideTabPortfolio" data-tab="portfolio" role="tab">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8"/><path d="m9 11 3 3L22 4"/><path d="M15 19l2 2 4-4"/></svg>
+            Portofolio
           </button>
         </div>
         <div id="sideTabContentOpen" class="panel-body" role="tabpanel">
@@ -153,6 +157,7 @@
           <div class="skeleton pos"></div>
         </div>
         <div id="sideTabContentHistory" class="panel-body hidden" role="tabpanel"></div>
+        <div id="sideTabContentPortfolio" class="panel-body hidden" role="tabpanel"></div>
       </section>
 
     </main>
@@ -226,8 +231,8 @@
       <!-- RECAP -->
       <div id="drawerTabRecap" class="drawer-pane hidden">
         <div class="drawer-section-title">
-          <span>Laporan Kinerja &amp; Rekapitulasi</span>
-          <span class="sub">Ponyin Quant v5</span>
+          <span>Evaluasi Kinerja Engine</span>
+          <span class="sub">dihitung dari riwayat trade</span>
         </div>
         <div class="recap-tabs" id="recapTabs">
           <button data-tf="daily" class="active">24 Jam</button>
@@ -235,7 +240,40 @@
           <button data-tf="monthly">30 Hari</button>
           <button data-tf="all">All-Time</button>
         </div>
-        <div id="recapContentBox" class="recap-box">Memuat analisis rekapitulasi engine...</div>
+
+        <!-- Summary stat cards -->
+        <div class="recap-stats" id="recapStats">
+          <div class="rc-stat"><div class="v" id="rcTrades">—</div><div class="k">Total Trade</div></div>
+          <div class="rc-stat"><div class="v" id="rcWinrate">—</div><div class="k">Win Rate</div></div>
+          <div class="rc-stat"><div class="v" id="rcNet">—</div><div class="k">Net PnL</div></div>
+          <div class="rc-stat"><div class="v" id="rcPF">—</div><div class="k">Profit Factor</div></div>
+          <div class="rc-stat"><div class="v" id="rcBest">—</div><div class="k">Trade Terbaik</div></div>
+          <div class="rc-stat"><div class="v" id="rcWorst">—</div><div class="k">Trade Terburuk</div></div>
+        </div>
+
+        <!-- Per-symbol performance table -->
+        <div class="drawer-section-title"><span>Kinerja per Token</span></div>
+        <div class="table-wrap">
+          <table class="data-table" id="recapSymbolTable">
+            <thead>
+              <tr><th>Token</th><th class="num">Trade</th><th class="num">Win</th><th class="num">Net SOL</th><th class="num">Peak</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="recapEmpty" class="empty-state hidden">
+            <div class="orb"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 4-4 4 3 5-6"/></svg></div>
+            <div class="title">Belum ada trade di periode ini</div>
+          </div>
+        </div>
+
+        <!-- Hold time insight -->
+        <div class="recap-box" id="recapInsight" style="white-space:normal">—</div>
+
+        <!-- Engine official text report -->
+        <details class="engine-report">
+          <summary>Laporan resmi engine (teks Ponyin)</summary>
+          <div id="recapContentBox" class="recap-box">Memuat laporan engine...</div>
+        </details>
       </div>
 
       <!-- WALLET -->

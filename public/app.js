@@ -211,16 +211,23 @@ function sparklineSVG(ca) {
     return x.toFixed(1) + ',' + y.toFixed(1);
   });
   const up = buf[buf.length - 1] >= buf[0];
-  const color = up ? 'var(--green)' : 'var(--red)';
+  const color = up ? '#2fd77b' : '#ff5470'; // literal hex: SVG attributes cannot resolve CSS vars
   const line = `M${pts.join('L')}`;
   const area = `${line}L${W - PAD},${H}L${PAD},${H}Z`;
+  const gid = 'sg' + Math.abs(hashStr(ca)).toString(36);
   return `<div class="sig-spark"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="g-${esc(ca).slice(0, 8)}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="transparent"/>
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
     </linearGradient></defs>
-    <path class="area" d="${area}" fill="url(#g-${esc(ca).slice(0, 8)})"/>
+    <path class="area" d="${area}" fill="url(#${gid})"/>
     <path class="line" d="${line}" stroke="${color}"/>
   </svg></div>`;
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 /* ---------------- Signal cards (keyed renderer) ---------------- */
@@ -612,6 +619,7 @@ function applyPayload(data) {
   renderSignals();
   renderActivePositions();
   renderHistory();
+  renderPortfolio(false);
   renderStats();
 }
 
@@ -720,7 +728,7 @@ function switchDrawerTab(tab) {
   });
   if (tab === 'wallets') loadSmartWallets();
   if (tab === 'wallet') loadWalletData();
-  if (tab === 'recap') loadRecap(currentRecapTf);
+  if (tab === 'recap') renderRecap();
 }
 
 /* ---------------- Smart money ---------------- */
@@ -774,37 +782,251 @@ function emptyStateHTML(icon, title, hint) {
     </div>`;
 }
 
-/* ---------------- Recap ---------------- */
+/* ---------------- Recap (structured performance report) ---------------- */
 
-let currentRecapTf = 'daily';
-let recapCache = {};
+let recapPeriod = 'daily';
+let engineRecapCache = {};
 
-async function loadRecap(tf) {
-  currentRecapTf = tf;
-  document.querySelectorAll('#recapTabs button').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
-  const box = document.getElementById('recapContentBox');
+function closedInPeriod(days) {
+  if (!days) return state.closedPositions.slice();
+  const cutoff = Date.now() - days * 86400e3;
+  return state.closedPositions.filter(c => (parseTs(c.closed_at) || 0) >= cutoff);
+}
 
-  if (recapCache[tf]) { box.textContent = recapCache[tf]; return; }
-  box.textContent = 'Menghitung rekapitulasi data engine...';
+function netOf(c) {
+  return (parseFloat(c.realized_sol) || 0) - (parseFloat(c.sol_spent) || 0);
+}
 
-  try {
-    const res = await fetch(`/api/recap?timeframe=${tf}`);
-    const data = await res.json();
-    if (data.success && data.recap_html) {
-      recapCache[tf] = data.recap_html;
-      box.textContent = data.recap_html;
-    } else {
-      box.textContent = 'Belum ada data evaluasi untuk timeframe ini.';
-    }
-  } catch (e) {
-    box.textContent = `Gagal memuat recap: ${e.message}`;
+function isWinTrade(c) {
+  return (parseFloat(c.realized_sol) || 0) >= (parseFloat(c.sol_spent) || 0);
+}
+
+function renderRecap() {
+  const days = { daily: 1, weekly: 7, monthly: 30, all: 0 }[recapPeriod] || 0;
+  const list = closedInPeriod(days);
+  document.querySelectorAll('#recapTabs button').forEach(b => b.classList.toggle('active', b.dataset.tf === recapPeriod));
+
+  const nets = list.map(netOf);
+  const totalNet = nets.reduce((a, b) => a + b, 0);
+  const wins = list.filter(isWinTrade).length;
+  const wr = list.length ? (wins / list.length) * 100 : 0;
+  const grossWin = nets.filter(n => n > 0).reduce((a, b) => a + b, 0);
+  const grossLoss = Math.abs(nets.filter(n => n < 0).reduce((a, b) => a + b, 0));
+  const pf = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Infinity : 0);
+  const best = list.length ? list.reduce((a, b) => netOf(b) > netOf(a) ? b : a) : null;
+  const worst = list.length ? list.reduce((a, b) => netOf(b) < netOf(a) ? b : a) : null;
+
+  const set = (id, html, cls) => {
+    const el = document.getElementById(id);
+    el.innerHTML = html;
+    el.className = 'v ' + (cls || '');
+  };
+  set('rcTrades', String(list.length));
+  set('rcWinrate', list.length ? `${wr.toFixed(0)}%` : '—', list.length ? (wr >= 50 ? 'up' : 'down') : '');
+  set('rcNet', `${totalNet >= 0 ? '+' : ''}${totalNet.toFixed(4)}`, totalNet >= 0 ? 'up' : 'down');
+  set('rcPF', list.length ? (pf === Infinity ? '∞' : pf.toFixed(2)) : '—', pf >= 1.5 ? 'up' : pf >= 1 ? 'dim' : 'down');
+  set('rcBest', best ? `<span style="font-size:9px;color:var(--text-4)">$${esc(best.symbol)}</span> +${netOf(best).toFixed(4)}` : '—', best ? 'up' : '');
+  set('rcWorst', worst ? `<span style="font-size:9px;color:var(--text-4)">$${esc(worst.symbol)}</span> ${netOf(worst).toFixed(4)}` : '—', worst ? 'down' : '');
+
+  // per-symbol table
+  const tbody = document.querySelector('#recapSymbolTable tbody');
+  const bySym = {};
+  for (const c of list) {
+    const s = bySym[c.symbol] || (bySym[c.symbol] = { trades: 0, wins: 0, net: 0, peak: 0 });
+    s.trades++;
+    if (isWinTrade(c)) s.wins++;
+    s.net += netOf(c);
+    s.peak = Math.max(s.peak, parseFloat(c.peak_multiplier) || 1);
   }
+  const rows = Object.entries(bySym).sort((a, b) => b[1].net - a[1].net);
+  document.getElementById('recapEmpty').classList.toggle('hidden', list.length > 0);
+  document.getElementById('recapSymbolTable').classList.toggle('hidden', list.length === 0);
+  tbody.innerHTML = rows.map(([sym, s]) => `
+    <tr>
+      <td class="sym-cell">$${esc(sym)}</td>
+      <td class="num">${s.trades}</td>
+      <td class="num" style="color:${s.wins / s.trades >= 0.5 ? 'var(--green)' : 'var(--red)'}">${((s.wins / s.trades) * 100).toFixed(0)}%</td>
+      <td class="num" style="color:${s.net >= 0 ? 'var(--green)' : 'var(--red)'}">${s.net >= 0 ? '+' : ''}${s.net.toFixed(4)}</td>
+      <td class="num" style="color:var(--cyan)">${s.peak.toFixed(2)}x</td>
+    </tr>`).join('');
+
+  // insight line
+  const holds = list.map(c => parseInt(c.hold_duration_sec) || 0).filter(h => h > 0);
+  const avgHold = holds.length ? holds.reduce((a, b) => a + b, 0) / holds.length : 0;
+  const volume = list.reduce((a, c) => a + (parseFloat(c.sol_spent) || 0), 0);
+  document.getElementById('recapInsight').innerHTML = list.length
+    ? `Periode ini engine mengeksekusi <b>${list.length} trade</b> (volume ${volume.toFixed(2)} SOL) dengan durasi rata-rata <b>${fmtHold(avgHold)}</b>. ` +
+      `${wins} menang / ${list.length - wins} kalah. ${totalNet >= 0 ? 'Net profit' : 'Net loss'} <b style="color:${totalNet >= 0 ? 'var(--green)' : 'var(--red)'}">${Math.abs(totalNet).toFixed(4)} SOL</b>.`
+    : 'Belum ada trade tertutup pada periode ini. Statistik diisi otomatis dari riwayat engine.';
+}
+
+function setRecapPeriod(tf) {
+  recapPeriod = tf;
+  renderRecap();
 }
 
 document.getElementById('recapTabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tf]');
-  if (btn) loadRecap(btn.dataset.tf);
+  if (btn) setRecapPeriod(btn.dataset.tf);
 });
+
+document.querySelector('.engine-report').addEventListener('toggle', e => {
+  if (e.target.open) loadEngineRecap(recapPeriod);
+});
+
+async function loadEngineRecap(tf) {
+  const box = document.getElementById('recapContentBox');
+  if (engineRecapCache[tf]) { box.textContent = engineRecapCache[tf]; return; }
+  box.textContent = 'Memuat laporan engine...';
+  try {
+    const res = await fetch(`/api/recap?timeframe=${tf}`);
+    const data = await res.json();
+    if (data.success && data.recap_html) {
+      engineRecapCache[tf] = data.recap_html;
+      box.textContent = data.recap_html;
+    } else {
+      box.textContent = data.error ? `Laporan engine tidak tersedia: ${data.error}` : 'Belum ada laporan engine untuk periode ini.';
+    }
+  } catch (e) {
+    box.textContent = `Gagal memuat: ${e.message}`;
+  }
+}
+
+/* ---------------- Portfolio tab ---------------- */
+
+let pfSig = '';
+
+function buildPortfolioData() {
+  const open = state.activePositions;
+  const closed = state.closedPositions;
+  const B = parseFloat(state.stats.virtual_balance_sol) || 0;
+
+  const events = [];
+  for (const p of open) {
+    const t = parseTs(p.created_at) || Date.now();
+    events.push({ t, type: 'BUY', sym: p.symbol, sol: -(parseFloat(p.sol_spent) || 0), pos: p });
+    const realized = parseFloat(p.realized_sol) || 0;
+    if (realized > 0) events.push({ t: t + 1000, type: 'SELL', sym: p.symbol, sol: realized, pos: p });
+  }
+  for (const c of closed) {
+    events.push({ t: parseTs(c.created_at) || 0, type: 'BUY', sym: c.symbol, sol: -(parseFloat(c.sol_spent) || 0), pos: c });
+    events.push({ t: parseTs(c.closed_at) || (parseTs(c.created_at) || 0) + 1, type: 'CLOSE', sym: c.symbol, sol: parseFloat(c.realized_sol) || 0, pos: c });
+  }
+
+  // implied starting capital: current balance minus every cashflow so far
+  const sumNet = events.reduce((a, e) => a + e.sol, 0);
+  let bal = B - sumNet;
+  events.sort((a, b) => a.t - b.t);
+
+  const points = [];
+  if (events.length) points.push({ t: events[0].t, v: bal });
+  const ledger = [];
+  for (const e of events) {
+    bal += e.sol;
+    points.push({ t: e.t, v: bal });
+    ledger.unshift({ ...e, balAfter: bal });
+  }
+  return { balance: B, initial: events.length ? B - sumNet : B, points, ledger };
+}
+
+function equityChartSVG(points) {
+  const W = 300, H = 100, PAD = 8;
+  if (points.length < 2) {
+    return `<div style="height:120px;display:grid;place-items:center;font-family:var(--font-mono);font-size:10px;color:var(--text-4);letter-spacing:0.06em">KURVA SALDO MUNCUL SETELAH TRADE PERTAMA</div>`;
+  }
+  const vs = points.map(p => p.v);
+  let min = Math.min(...vs), max = Math.max(...vs);
+  if (max - min < 1e-6) { max += 0.005; min -= 0.005; }
+  const pts = points.map((p, i) => {
+    const x = PAD + (i / (points.length - 1)) * (W - 2 * PAD);
+    const y = H - PAD - ((p.v - min) / (max - min)) * (H - 2 * PAD);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  const up = vs[vs.length - 1] >= vs[0];
+  const color = up ? '#2fd77b' : '#ff5470'; // literal hex: SVG attributes cannot resolve CSS vars
+  const line = `M${pts.join('L')}`;
+  const area = `${line}L${W - PAD},${H}L${PAD},${H}Z`;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="pfGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line class="gridline" x1="0" y1="${H / 4}" x2="${W}" y2="${H / 4}"/>
+    <line class="gridline" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}"/>
+    <line class="gridline" x1="0" y1="${3 * H / 4}" x2="${W}" y2="${3 * H / 4}"/>
+    <path class="area" d="${area}" fill="url(#pfGrad)"/>
+    <path class="line" d="${line}"/>
+  </svg>`;
+}
+
+function renderPortfolio(force) {
+  const el = document.getElementById('sideTabContentPortfolio');
+  const stats = state.stats || {};
+  const sig = `${stats.virtual_balance_sol}|${state.activePositions.map(p => p.id + ':' + p.realized_sol).join(',')}|${state.closedPositions.map(p => p.id).join(',')}`;
+  if (!force && sig === pfSig) return;
+  pfSig = sig;
+
+  const data = buildPortfolioData();
+  const B = data.balance;
+  const pnl = B - data.initial;
+  const pnlPct = data.initial > 0 ? (pnl / data.initial) * 100 : 0;
+
+  const open = state.activePositions;
+  const closed = state.closedPositions;
+  const wins = closed.filter(isWinTrade).length;
+  const wr = closed.length ? (wins / closed.length) * 100 : 0;
+  const solPrice = networkState.sol_price_usd || 0;
+  const openValueSol = open.reduce((a, p) => a + ((parseFloat(p.tokens_remaining) || 0) * (parseFloat(p.current_price_usd) || 0)) / (solPrice || 1), 0);
+  const volume = closed.reduce((a, c) => a + (parseFloat(c.sol_spent) || 0), 0);
+
+  el.innerHTML = `
+    <div class="pf-head">
+      <div class="kpi-label" style="justify-content:center">${I.wallet} Saldo Portofolio</div>
+      <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span></div>
+      <div class="pf-balance-sub">
+        <b class="${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)</b>
+        · modal awal ${fmtSol(data.initial)} SOL
+      </div>
+    </div>
+    <div class="pf-chart">
+      ${equityChartSVG(data.points)}
+      <div class="pf-chart-labels"><span>pergerakan saldo (ledger replay)</span><span>${data.points.length} titik</span></div>
+    </div>
+    <div class="pf-stats">
+      <div class="pf-stat"><div class="v">${closed.length + open.length}</div><div class="k">Total Transaksi</div></div>
+      <div class="pf-stat"><div class="v" style="color:${wr >= 50 ? 'var(--green)' : 'var(--red)'}">${closed.length ? wr.toFixed(0) + '%' : '—'}</div><div class="k">Win Rate</div></div>
+      <div class="pf-stat"><div class="v" style="color:var(--cyan)">${open.length}</div><div class="k">Posisi Terbuka</div></div>
+      <div class="pf-stat"><div class="v">${openValueSol > 0 ? fmtSol(openValueSol) : '—'}</div><div class="k">Nilai Posisi (SOL)</div></div>
+      <div class="pf-stat"><div class="v">${volume.toFixed(2)}</div><div class="k">Volume (SOL)</div></div>
+      <div class="pf-stat"><div class="v" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)}</div><div class="k">Realized PnL</div></div>
+    </div>
+    <div class="pf-section-title"><span>Riwayat Transaksi</span><span class="kpi-foot" style="text-transform:none;letter-spacing:0">${data.ledger.length} event</span></div>
+    <div class="ledger">
+      ${data.ledger.length === 0 ? `
+        <div class="empty-state">
+          <div class="orb">${I.wallet}</div>
+          <div class="title">Belum ada transaksi</div>
+          <div class="hint">Setiap buy, sell parsial, dan penutupan posisi tercatat di sini bersama saldo setelahnya.</div>
+        </div>` :
+      data.ledger.map(e => {
+        const isBuy = e.type === 'BUY';
+        const exit = ((e.pos && e.pos.exit_reason) || '').toUpperCase();
+        const badge = isBuy ? ['buy', 'BUY'] : e.type === 'SELL' ? ['sell', 'SELL'] : exit.includes('TP') ? ['tp', 'TP'] : exit.includes('SL') ? ['sl', 'SL'] : ['sell', 'CLOSE'];
+        const amt = e.sol;
+        return `
+        <div class="ledger-row">
+          <span class="ledger-type ${badge[0]}">${badge[1]}</span>
+          <div class="ledger-main">
+            <div class="ledger-sym">$${esc(e.sym)}</div>
+            <div class="ledger-sub">${relTime(e.t)}${e.type === 'CLOSE' && e.pos ? ' · ' + esc(e.pos.exit_reason || '') : e.type === 'SELL' ? ' · parsial (TP1)' : ''}</div>
+          </div>
+          <div class="ledger-right">
+            <div class="ledger-amt" style="color:${amt >= 0 ? 'var(--green)' : 'var(--red)'}">${amt >= 0 ? '+' : '−'}${Math.abs(amt).toFixed(4)}</div>
+            <div class="ledger-bal">saldo ${e.balAfter.toFixed(4)}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
 
 /* ---------------- Wallet ---------------- */
 
@@ -997,6 +1219,8 @@ document.querySelectorAll('.side-tab').forEach(btn => {
     document.querySelectorAll('.side-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('sideTabContentOpen').classList.toggle('hidden', state.sideTab !== 'open');
     document.getElementById('sideTabContentHistory').classList.toggle('hidden', state.sideTab !== 'history');
+    document.getElementById('sideTabContentPortfolio').classList.toggle('hidden', state.sideTab !== 'portfolio');
+    if (state.sideTab === 'portfolio') renderPortfolio(true);
   });
 });
 

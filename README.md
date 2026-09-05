@@ -22,18 +22,19 @@ Real-time Web Dashboard untuk **ScreenerNantiAja** (Solana Quant Screener & Auto
 - **Posisi & Riwayat** — panel posisi aktif dengan PnL live, riwayat trade lengkap (R-multiple, hold duration, hasil TP/SL).
 
 ### Wallet & Smart Money
+- **Tab Portofolio** — saldo besar, **kurva pergerakan saldo** (ledger replay semua transaksi), 6 statistik portofolio (total transaksi, win rate, posisi terbuka, nilai posisi, volume, realized PnL), dan **riwayat transaksi** lengkap (BUY/SELL/TP/SL) dengan saldo setelah tiap event.
+- **Evaluasi Kinerja Terstruktur** — kartu statistik (net PnL, profit factor, trade terbaik/terburuk), **tabel kinerja per token**, insight naratif, plus laporan teks resmi engine dalam collapsible.
 - **Import Wallet Sendiri** — masuk dengan private key Base58/hex (terenkripsi oleh engine `wallet_manager`).
 - **Export Private Key**, deposit address, dan saldo on-chain.
 - **Top Smart Money Radar** — leaderboard wallet whale (win rate 7d, PnL, kategori, tags).
-- **Evaluasi & Recap** — laporan kinerja engine 24 jam / 7 hari / 30 hari / all-time.
 - **Quick CA Checker** — cek token Solana mana pun langsung dari header (shortcut `/`).
 
 ## 🎨 Desain (Rebranding v2)
 
-- Logo baru **radar-pulse**: sweep lime gradient dengan blip deteksi — favicon, header, dan status bar.
+- Logo baru **"N" candlestick**: dua candle ber-wick sebagai batang huruf N, dihubungkan garis harga dengan node lime — orisinal, favicon, header, dan status bar.
 - Design system CSS murni (zero CDN): token warna berlapis, radii, motion, dan state (`public/app.css`).
 - Semua ikon inline SVG — tetap berfungsi di jaringan Tailscale tanpa internet.
-- Skeleton loading, empty state, toast bertipe, keyboard (`/` fokus pencarian, `Esc` menutup overlay), responsif hingga mobile.
+- Skeleton loading, empty state, toast bertipe, keyboard (`/` fokus pencarian, `Esc` menutup overlay), responsif penuh hingga layar 390px.
 
 ## 🛠️ Arsitektur
 
