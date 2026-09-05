@@ -1060,6 +1060,38 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   line-height: 2.1;
   color: var(--text-2);
   overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.013) 0 1px, transparent 1px 26px);
+}
+
+/* Tree + donut layout */
+.recap-tree-card { padding: 0; overflow: hidden; }
+
+.recap-tree-wrap {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 20px 24px 22px;
+}
+
+.recap-donut {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-left: 26px;
+  border-left: 1px dashed var(--border-2);
+}
+
+.donut-svg { width: 152px; height: 152px; filter: drop-shadow(0 0 14px rgba(47, 215, 123, 0.18)); }
+
+.donut-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+@media (max-width: 860px) {
+  .recap-tree-wrap { flex-direction: column; align-items: stretch; gap: 16px; }
+  .recap-donut { flex: none; border-left: 0; border-top: 1px dashed var(--border-2); padding-left: 0; padding-top: 18px; }
 }
 
 .tree-title { font-size: 15px; font-weight: 800; color: var(--text-1); }

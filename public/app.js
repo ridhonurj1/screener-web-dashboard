@@ -1783,6 +1783,27 @@ function renderEnginePerformance(force) {
     <div class="tree-line">├─ Winrate: <b class="lime">${wr.toFixed(1)}%</b>${list.length ? `<span class="wr-bar"><i style="width:${wr}%"></i></span>` : ''}</div>
     <div class="tree-line">└─ Top ATH: ${best ? `<b class="lime">$${esc(best.symbol)}</b> (<b>${(parseFloat(best.peak_multiplier) || 0).toFixed(2)}x</b>)` : '—'}</div>`;
 
+  // winrate donut beside the tree
+  const donut = document.getElementById('recapDonut');
+  if (donut) {
+    const C = 2 * Math.PI * 52;
+    const dash = (wr / 100) * C;
+    const ring = list.length === 0 ? '#55637c' : wr >= 50 ? '#2fd77b' : '#ffc24d';
+    donut.innerHTML = `
+      <svg class="donut-svg" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#1b2740" stroke-width="11"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="${ring}" stroke-width="11" stroke-linecap="round"
+          stroke-dasharray="${dash.toFixed(1)} 999" transform="rotate(-90 60 60)"/>
+        <text x="60" y="57" text-anchor="middle" fill="#f2f6fc" font-family="JetBrains Mono, ui-monospace, monospace" font-size="21" font-weight="800">${list.length ? wr.toFixed(0) + '%' : '—'}</text>
+        <text x="60" y="75" text-anchor="middle" fill="#7d8da6" font-family="JetBrains Mono, ui-monospace, monospace" font-size="8" letter-spacing="2">WINRATE</text>
+      </svg>
+      <div class="donut-chips">
+        <span class="chip chip-green">WIN ${wins}</span>
+        <span class="chip chip-red">LOSE ${losses}</span>
+        <span class="chip">RUN ${running}</span>
+      </div>`;
+  }
+
   // benchmark cards
   const setBench = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
   const setCls = (id, cls) => { const el = document.getElementById(id); if (el) el.className = 'bench-status mono ' + cls; };
