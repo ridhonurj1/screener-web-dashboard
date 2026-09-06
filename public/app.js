@@ -1483,17 +1483,17 @@ function renderPortfolio(force) {
   const volume = closed.reduce((a, c) => a + (parseFloat(c.sol_spent) || 0), 0);
 
   el.innerHTML = `
-    <div class="pf-head">
+    <div class="pf-head" style="position:relative">
       <div class="kpi-label" style="justify-content:center">${I.wallet} Saldo Portofolio</div>
       <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span>${solPrice > 0 ? `<span class="unit">≈</span> <span style="color:var(--text-1)">$${(B * solPrice).toFixed(2)}</span>` : ''}</div>
       <div class="pf-balance-sub">
         <b class="${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)</b>
         · modal awal ${fmtSol(data.initial)} SOL${solPrice > 0 ? ` · PnL ≈ ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solPrice).toFixed(2)} USD` : ''}
       </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:-6px 0 10px;padding:0 24px">
-      <span style="font-size:11px;color:var(--text-3)">Zona waktu:</span>
-      <select class="tz-sel mono" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 8px;font-size:11px"></select>
+      <div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--text-3)">Zona waktu:</span>
+        <select class="tz-sel mono" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 8px;font-size:11px"></select>
+      </div>
     </div>
     <div class="pf-chart">
       <div class="eqchart" id="eqChart"></div>
