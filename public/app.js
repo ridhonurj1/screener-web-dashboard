@@ -1465,7 +1465,7 @@ function renderPortfolio(force) {
   const el = document.getElementById('portfolioView');
   if (!el) return;
   const stats = state.stats || {};
-  const sig = `${stats.virtual_balance_sol}|${state.activePositions.map(p => p.id + ':' + p.realized_sol).join(',')}|${state.closedPositions.map(p => p.id).join(',')}`;
+  const sig = `${stats.virtual_balance_sol}|${state.activePositions.map(p => p.id + ':' + p.realized_sol).join(',')}|${state.closedPositions.map(p => p.id).join(',')}|${networkState.sol_price_usd || 0}`;
   if (!force && sig === pfSig) return;
   pfSig = sig;
 
