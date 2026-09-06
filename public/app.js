@@ -2335,18 +2335,6 @@ if (_tzSel) {
   });
 }
 
-// Zona waktu: ganti -> render ulang halaman aktif (kurva, label, ping)
-const _tzSel = document.getElementById('tzSel');
-if (_tzSel) {
-  _tzSel.value = TZ_MODE;
-  if (_tzSel.value !== TZ_MODE) _tzSel.value = 'auto';
-  _tzSel.addEventListener('change', e => {
-    TZ_MODE = e.target.value;
-    try { localStorage.setItem('tzMode', TZ_MODE); } catch (err) { /* noop */ }
-    setCurrentPage(window.location.pathname);
-  });
-}
-
 /* ---------------- Boot ---------------- */
 
 /* ---------------- Logs page (/logs) ---------------- */
