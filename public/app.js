@@ -438,6 +438,12 @@ function buildSignalCard(sig) {
       <div class="metric"><div class="k">${I.drop} Likuiditas</div><div class="v c-cyan" data-ref="liq">—</div></div>
       <div class="metric"><div class="k">${I.brain} Smart Money</div><div class="v c-lime" data-ref="sm">0 SM</div></div>
     </div>
+    <div class="sig-meta-tags" style="display:flex;gap:6px;font-size:10px;padding:4px 0;flex-wrap:wrap">
+      <span class="chip" data-ref="ratTag" style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--text-3)">🐀 Rat: —</span>
+      <span class="chip" data-ref="sniperTag" style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--text-3)">🎯 Snip70: —</span>
+      <span class="chip" data-ref="bluechipTag" style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--text-3)">💎 Bluechip: —</span>
+      <span class="chip" data-ref="kolTag" style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--text-3)">📢 KOL: —</span>
+    </div>
     <div class="score-meter">
       <span class="kpi-label" style="font-size:9px">${I.flame} Alpha Score</span>
       <div class="track"><i data-ref="scoreBar"></i></div>
@@ -501,6 +507,28 @@ function updateSignalCard(sig) {
   refs.entry.textContent = fmtUSD(sig.entry_mcap);
   refs.liq.textContent = fmtUSD(sig.liq);
   refs.sm.textContent = `${parseInt(sig.sm_count) || 0} SM`;
+
+  // intel GMGN tags
+  if (refs.ratTag) {
+    const rat = parseFloat(sig.rat_trader_rate || 0);
+    refs.ratTag.textContent = `🐀 Rat: ${rat.toFixed(1)}%`;
+    refs.ratTag.style.color = rat > 5 ? 'var(--red)' : rat === 0 ? 'var(--lime)' : 'var(--text-3)';
+  }
+  if (refs.sniperTag) {
+    const snip = parseFloat(sig.top70_sniper_rate || 0);
+    refs.sniperTag.textContent = `🎯 Snip70: ${snip.toFixed(1)}%`;
+    refs.sniperTag.style.color = snip > 25 ? 'var(--red)' : snip <= 10 && snip > 0 ? 'var(--lime)' : 'var(--text-3)';
+  }
+  if (refs.bluechipTag) {
+    const bc = parseFloat(sig.bluechip_owner_pct || 0);
+    refs.bluechipTag.textContent = `💎 Bluechip: ${bc.toFixed(1)}%`;
+    refs.bluechipTag.style.color = bc >= 5 ? 'var(--cyan)' : 'var(--text-3)';
+  }
+  if (refs.kolTag) {
+    const kol = parseInt(sig.renowned_count || 0);
+    refs.kolTag.textContent = `📢 KOL: ${kol}`;
+    refs.kolTag.style.color = kol > 0 ? 'var(--amber)' : 'var(--text-3)';
+  }
 
   // score meter
   const score = parseFloat(sig.score) || 0;
