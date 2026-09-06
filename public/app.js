@@ -673,6 +673,17 @@ function buildPositionCard(pos) {
 function updatePositionCard(pos) {
   const entry = posRefs.get(pos.id);
   if (!entry) return;
+
+  // SINKRONISASI REAL-TIME: Jika ada data harga lebih segar di daftar sinyal radar (shared price),
+  // gunakan harga & MCap paling mutakhir tersebut agar kartu posisi tidak pernah tertinggal.
+  const latestSig = state.signals.find(s => s.ca === pos.token_ca);
+  if (latestSig) {
+    const sigP = parseFloat(latestSig.current_price) || 0;
+    const sigMc = parseFloat(latestSig.current_mcap) || 0;
+    if (sigP > 0) pos.current_price_usd = sigP;
+    if (sigMc > 0) pos.current_mcap = sigMc;
+  }
+
   entry.pos = pos;
   const pnl = pnlOf(pos);
   const win = pnl >= 0;
