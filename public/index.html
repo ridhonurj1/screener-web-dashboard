@@ -178,6 +178,10 @@
 
     <!-- ==================== PAGE: PORTOFOLIO ==================== -->
     <main class="page hidden" id="pagePortofolio">
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:10px 24px 0">
+        <span style="font-size:11px;color:var(--text-3)">Zona waktu:</span>
+        <select class="tz-sel mono" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 8px;font-size:11px"></select>
+      </div>
       <div class="page-inner" id="portfolioView">
         <div class="skeleton pos"></div>
         <div class="skeleton pos"></div>
@@ -337,7 +341,7 @@
         <div style="font-size:11px;color:var(--text-3)" id="pingMeta">Memuat mirror state dari engine…</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <select id="tzSel" title="Zona waktu tampilan" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
+        <select id="tzSel" class="tz-sel" title="Zona waktu tampilan" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
           <option value="auto">Zona: Auto (Perangkat)</option>
           <option value="7">WIB (UTC+7)</option>
           <option value="8">UTC+8</option>

@@ -1315,14 +1315,43 @@ function tickDecimals(step) {
   return 2;
 }
 
-function fmtAxisTime(ts) {
-  const d = new Date(tzShift(ts));
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return `${hh}:${mm}`;
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}:${mm}`;
+/* Zona waktu tampilan (Auto/WIB/WITA/WIT/UTC) — tersimpan di browser */
+let TZ_MODE = (() => { try { return localStorage.getItem('tzMode') || 'auto'; } catch (e) { return 'auto'; } })();
+const TZ_OPTS = [['auto', 'Auto (Perangkat)'], ['7', 'WIB (UTC+7)'], ['8', 'WITA (UTC+8)'], ['9', 'WIT (UTC+9)'], ['0', 'UTC']];
+
+function tzOffsetH() {
+  return TZ_MODE === 'auto' ? -new Date().getTimezoneOffset() / 60 : (parseFloat(TZ_MODE) || 0);
 }
+
+function fmtAxisTime(ts) {
+  const d = new Date(ts);
+  const offH = tzOffsetH();
+  const s = new Date(d.getTime() + offH * 3600e3);
+  const hh = String(s.getUTCHours()).padStart(2, '0');
+  const mm = String(s.getUTCMinutes()).padStart(2, '0');
+  const day = String(s.getUTCDate()).padStart(2, '0');
+  const mon = String(s.getUTCMonth() + 1).padStart(2, '0');
+  const now = new Date();
+  const nowS = new Date(now.getTime() + offH * 3600e3);
+  if (s.getUTCDate() === nowS.getUTCDate() && s.getUTCMonth() === nowS.getUTCMonth()) return `${hh}:${mm}`;
+  return `${day}/${mon} ${hh}:${mm}`;
+}
+
+function syncTzSelects() {
+  document.querySelectorAll('select.tz-sel').forEach(sel => {
+    if (!sel.options.length) TZ_OPTS.forEach(([v, l]) => sel.add(new Option(l, v)));
+    sel.value = TZ_MODE;
+    if (sel.value !== TZ_MODE) sel.value = 'auto';
+  });
+}
+document.addEventListener('change', e => {
+  if (e.target && e.target.classList && e.target.classList.contains('tz-sel')) {
+    TZ_MODE = e.target.value;
+    try { localStorage.setItem('tzMode', TZ_MODE); } catch (err) { /* noop */ }
+    syncTzSelects();
+    setCurrentPage(window.location.pathname);
+  }
+});
 
 /* Interactive equity chart: Y-axis ruler, time axis, hover crosshair +
    tooltip. Line lives in a stretched SVG, all text/markers are HTML
@@ -2323,17 +2352,8 @@ document.getElementById('pingRefresh')?.addEventListener('click', loadPing);
 // halaman ikut poll tiap 2 detik selama halamannya terbuka.
 setInterval(() => { if (currentPage === 'healthping') loadPing(); }, 2000);
 
-// Zona waktu: ganti -> render ulang halaman aktif (kurva, label, ping)
-const _tzSel = document.getElementById('tzSel');
-if (_tzSel) {
-  _tzSel.value = TZ_MODE;
-  if (_tzSel.value !== TZ_MODE) _tzSel.value = 'auto';
-  _tzSel.addEventListener('change', e => {
-    TZ_MODE = e.target.value;
-    try { localStorage.setItem('tzMode', TZ_MODE); } catch (err) { /* noop */ }
-    setCurrentPage(window.location.pathname);
-  });
-}
+// Zona waktu: ganti -> render ulang halaman aktif (kurva, label, ping) —
+// ditangani listener change delegasi di atas (select.tz-sel).
 
 /* ---------------- Boot ---------------- */
 
