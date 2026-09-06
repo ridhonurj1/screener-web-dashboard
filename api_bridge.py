@@ -382,11 +382,13 @@ async def api_ping(request):
         """)
         tel = c.fetchone()
         db_read_ms = (time.perf_counter() - t_db_0) * 1000.0
+        hs_err = None
         try:
             c.execute("SELECT value, updated_at FROM health_state WHERE key='gmgn'")
             st = c.fetchone()
-        except Exception:
+        except Exception as _e_hs:
             st = None
+            hs_err = f"{type(_e_hs).__name__}: {_e_hs}"
         conn.close()
 
         if not tel:
@@ -483,6 +485,7 @@ async def api_ping(request):
             },
             "stats": gs,
             "slots": cluster,
+            "health_state_error": hs_err,
             "state_updated": state_updated,
             "age_seconds": age_sec,
             "age_minutes": age_min,
