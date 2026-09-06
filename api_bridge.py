@@ -365,6 +365,31 @@ async def api_recap(request):
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
+async def api_ping(request):
+    """Health Ping: membaca snapshot audit terakhir yang diterbitkan engine
+    ke health_ping.txt (0 kuota API — bukan menembak API apapun)."""
+    try:
+        p = os.path.join(ENGINE_DIR, "health_ping.txt")
+        if not os.path.exists(p):
+            return web.json_response({
+                "success": False,
+                "error": "Snapshot belum tersedia — engine menulisnya setiap siklus telemetri (maks 5 menit)"
+            }, status=404)
+        mtime = os.path.getmtime(p)
+        age_min = round((time.time() - mtime) / 60.0, 1)
+        with open(p, "r", encoding="utf-8") as f:
+            text = f.read()
+        import datetime as _dt
+        updated = _dt.datetime.utcfromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S UTC")
+        return web.json_response({
+            "success": True,
+            "text": text,
+            "age_minutes": age_min,
+            "updated": updated,
+        })
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
 async def api_smart_wallets(request):
     try:
         limit = min(int(request.query.get("limit", "100")), 250)
@@ -1052,6 +1077,7 @@ def create_app():
     app.router.add_get('/api/positions', api_positions)
     app.router.add_get('/api/stats', api_stats)
     app.router.add_get('/api/recap', api_recap)
+    app.router.add_get('/api/ping', api_ping)
     app.router.add_get('/api/smart_wallets', api_smart_wallets)
     app.router.add_get('/api/check_ca', api_check_ca)
     app.router.add_get('/api/network', api_network)

@@ -1969,7 +1969,7 @@ async function pollNetwork() {
 
 /* ---------------- Page routing ---------------- */
 
-const ROUTE_PAGE = { '/': 'terminal', '/portofolio': 'portofolio', '/evaluasi': 'evaluasi', '/recap': 'recap', '/logs': 'logs' };
+  const ROUTE_PAGE = { '/': 'terminal', '/portofolio': 'portofolio', '/evaluasi': 'evaluasi', '/recap': 'recap', '/healthping': 'healthping', '/logs': 'logs' };
 const currentPage = ROUTE_PAGE[window.location.pathname.replace(/\/+$/, '') || '/'] || 'terminal';
 
 function activatePage() {
@@ -1978,6 +1978,7 @@ function activatePage() {
   document.getElementById('pagePortofolio').classList.toggle('hidden', currentPage !== 'portofolio');
   document.getElementById('pageEvaluasi').classList.toggle('hidden', currentPage !== 'evaluasi');
   document.getElementById('pageRecap').classList.toggle('hidden', currentPage !== 'recap');
+  document.getElementById('pageHealthPing').classList.toggle('hidden', currentPage !== 'healthping');
   document.getElementById('pageLogs').classList.toggle('hidden', currentPage !== 'logs');
   document.querySelectorAll('.pagenav a').forEach(a => a.classList.toggle('active', a.dataset.nav === currentPage));
 }
@@ -2176,6 +2177,25 @@ if (_rsSize) _rsSize.addEventListener('change', e => {
   renderEnginePerformance(true);
 });
 
+/* ---------------- Health Ping page ---------------- */
+async function loadPing() {
+  try {
+    const res = await fetch('/api/ping');
+    const data = await res.json();
+    const box = document.getElementById('pingBox');
+    const meta = document.getElementById('pingMeta');
+    if (!box) return;
+    if (data.success && data.text) {
+      if (box.textContent !== data.text) box.textContent = data.text;
+      if (meta) meta.textContent = `Snapshot: ${data.updated} · ${data.age_minutes} menit lalu · 0 kuota API`;
+    } else if (meta) {
+      meta.textContent = data.error || 'Snapshot belum tersedia';
+    }
+  } catch (e) { /* non-critical */ }
+}
+document.getElementById('pingRefresh')?.addEventListener('click', loadPing);
+setInterval(() => { if (currentPage === 'healthping') loadPing(); }, 60000);
+
 /* ---------------- Boot ---------------- */
 
 /* ---------------- Logs page (/logs) ---------------- */
@@ -2317,6 +2337,7 @@ activatePage();
 if (currentPage === 'portofolio') renderPortfolio(true);
 if (currentPage === 'evaluasi') renderRecap(true);
 if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); renderMilestones(); }
+if (currentPage === 'healthping') loadPing();
 if (currentPage === 'logs') pollLogs();
 
 httpBootstrap();

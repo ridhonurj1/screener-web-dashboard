@@ -75,6 +75,10 @@
         <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8m8 4H8m2-8H8"/></svg>
         Recap
       </a>
+      <a href="/healthping" data-nav="healthping">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Health Ping
+      </a>
       <a href="/logs" data-nav="logs">
         <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
         Logs
@@ -325,7 +329,19 @@
       </div>
     </main>
 
-    <!-- ==================== PAGE: LOGS ==================== -->
+    <!-- ==================== PAGE: HEALTH PING ==================== -->
+  <main class="page hidden" id="pageHealthPing">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <h1 class="page-title">🏓 Health Ping</h1>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="pingMeta" style="font-size:11px;color:var(--text-3)">Memuat snapshot telemetri…</span>
+        <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px">Memuat snapshot telemetri dari engine…</div>
+  </main>
+
+  <!-- ==================== PAGE: LOGS ==================== -->
     <main class="page hidden" id="pageLogs">
       <div class="page-inner" style="max-width:none">
         <div class="page-head">
@@ -675,6 +691,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906g"></script>
+  <script src="/app.js?v=20260906h"></script>
 </body>
 </html>
