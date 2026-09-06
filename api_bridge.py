@@ -348,10 +348,23 @@ async def api_signals(request):
             data = cached[:limit]
     return web.json_response({"success": True, "count": len(data), "data": data})
 
+# Konfigurasi auto-exit engine (sumber: paper_trading_engine.py — pesan
+# entry Telegram "Target TP 1 (+40%) / Trailing adaptif / Hard SL -25% /
+# Stagnancy 25 menit"). Untuk kartu detail posisi di dashboard.
+PAPER_RISK_CONFIG = {
+    "tp1_trigger_mult": 1.40,
+    "tp1_sell_pct": 71.4,
+    "trailing_arm_mult": 1.80,
+    "trailing_drawdown_min_pct": 15,
+    "trailing_drawdown_max_pct": 28,
+    "hard_stop_loss_pct": 25,
+    "stagnancy_max_hold_min": 25,
+}
+
 async def api_positions(request):
     wallet_mode = request.query.get("wallet_mode", "").lower()
     user_id = request.query.get("user_id", "6166029678")
-    
+
     # Jika wallet_mode='real' -> baca dari user_trading_positions
     if wallet_mode == "real":
         try:
@@ -366,21 +379,24 @@ async def api_positions(request):
                 "success": True,
                 "wallet_mode": "real",
                 "active": real_active,
-                "closed": real_closed
+                "closed": real_closed,
+                "risk_config": PAPER_RISK_CONFIG
             })
         except Exception:
             return web.json_response({
                 "success": True,
                 "wallet_mode": "real",
                 "active": [],
-                "closed": []
+                "closed": [],
+                "risk_config": PAPER_RISK_CONFIG
             })
 
     return web.json_response({
         "success": True,
         "wallet_mode": "demo",
         "active": in_memory_state["active_positions"],
-        "closed": in_memory_state["closed_positions"]
+        "closed": in_memory_state["closed_positions"],
+        "risk_config": PAPER_RISK_CONFIG
     })
 
 async def api_stats(request):

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#070b12">
-  <title>ScreenerNantiAja — Quant Solana Terminal</title>
+  <title>ScreenerNantiAja â€” Quant Solana Terminal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-  <link rel="stylesheet" href="/app.css?v=20260907g">
+  <link rel="stylesheet" href="/app.css?v=20260907h">
 </head>
 <body>
   <div id="app">
@@ -41,9 +41,9 @@
 
         <!-- Sandbox stats -->
         <div class="hstat" title="Ringkasan akun paper trading">
-          <div class="hstat-item"><span class="lbl">SALDO</span><b id="statBalance">—</b></div>
-          <div class="hstat-item"><span class="lbl">PNL</span><b id="statPnl">—</b></div>
-          <div class="hstat-item"><span class="lbl">WIN</span><b id="statWinRate">—</b></div>
+          <div class="hstat-item"><span class="lbl">SALDO</span><b id="statBalance">â€”</b></div>
+          <div class="hstat-item"><span class="lbl">PNL</span><b id="statPnl">â€”</b></div>
+          <div class="hstat-item"><span class="lbl">WIN</span><b id="statWinRate">â€”</b></div>
         </div>
 
         <button class="wallet-badge" onclick="openDrawer('wallet')" aria-label="Buka detail wallet">
@@ -91,7 +91,7 @@
         <div class="kpi-top">
           <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Saldo</span>
         </div>
-        <div class="kpi-value"><span id="kpiBalance">—</span><span class="unit">SOL</span></div>
+        <div class="kpi-value"><span id="kpiBalance">â€”</span><span class="unit">SOL</span></div>
         <div class="kpi-foot" id="kpiBalanceSub">Modal awal 0.1 SOL</div>
       </div>
 
@@ -99,7 +99,7 @@
         <div class="kpi-top">
           <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M17 7H8m9 0v9"/></svg> Realized PnL</span>
         </div>
-        <div class="kpi-value"><span id="kpiPnl">—</span><span class="unit">SOL</span></div>
+        <div class="kpi-value"><span id="kpiPnl">â€”</span><span class="unit">SOL</span></div>
         <div class="kpi-foot" id="kpiPnlSub">Belum ada trade selesai</div>
       </div>
 
@@ -107,7 +107,7 @@
         <div class="kpi-top">
           <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Win Rate</span>
         </div>
-        <div class="kpi-value"><span id="kpiWinRate">—</span></div>
+        <div class="kpi-value"><span id="kpiWinRate">â€”</span></div>
         <div class="wr-meter" aria-hidden="true"><i id="kpiWinBar" style="width:0%"></i></div>
       </div>
 
@@ -115,7 +115,7 @@
         <div class="kpi-top">
           <span class="kpi-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Aktivitas Engine</span>
         </div>
-        <div class="kpi-value"><span id="kpiActivity">—</span></div>
+        <div class="kpi-value"><span id="kpiActivity">â€”</span></div>
         <div class="kpi-foot" id="kpiActivitySub">Memuat data engine...</div>
       </div>
     </section>
@@ -141,9 +141,9 @@
             <button data-filter="CLOSED">Tertutup</button>
           </div>
           <select class="sort-select" id="signalSort" aria-label="Urutkan sinyal">
-            <option value="time">⏱ Terbaru</option>
-            <option value="multiplier">🚀 Multiplikasi</option>
-            <option value="score">⭐ Skor</option>
+            <option value="time">â± Terbaru</option>
+            <option value="multiplier">ðŸš€ Multiplikasi</option>
+            <option value="score">â­ Skor</option>
           </select>
         </div>
 
@@ -190,7 +190,7 @@
         <div class="page-head">
           <div>
             <h1 class="page-title">Evaluasi Kinerja Engine</h1>
-            <p class="page-sub">Dihitung langsung dari riwayat trade engine — diperbarui real-time.</p>
+            <p class="page-sub">Dihitung langsung dari riwayat trade engine â€” diperbarui real-time.</p>
           </div>
           <div class="recap-tabs" id="recapTabs" style="min-width:340px">
             <button data-tf="daily" class="active">24 Jam</button>
@@ -201,12 +201,12 @@
         </div>
 
         <div class="recap-stats page-grid-6" id="recapStats">
-          <div class="rc-stat"><div class="v" id="rcTrades">—</div><div class="k">Total Trade</div></div>
-          <div class="rc-stat"><div class="v" id="rcWinrate">—</div><div class="k">Win Rate</div></div>
-          <div class="rc-stat"><div class="v" id="rcNet">—</div><div class="k">Net PnL</div></div>
-          <div class="rc-stat"><div class="v" id="rcPF">—</div><div class="k">Profit Factor</div></div>
-          <div class="rc-stat"><div class="v" id="rcBest">—</div><div class="k">Trade Terbaik</div></div>
-          <div class="rc-stat"><div class="v" id="rcWorst">—</div><div class="k">Trade Terburuk</div></div>
+          <div class="rc-stat"><div class="v" id="rcTrades">â€”</div><div class="k">Total Trade</div></div>
+          <div class="rc-stat"><div class="v" id="rcWinrate">â€”</div><div class="k">Win Rate</div></div>
+          <div class="rc-stat"><div class="v" id="rcNet">â€”</div><div class="k">Net PnL</div></div>
+          <div class="rc-stat"><div class="v" id="rcPF">â€”</div><div class="k">Profit Factor</div></div>
+          <div class="rc-stat"><div class="v" id="rcBest">â€”</div><div class="k">Trade Terbaik</div></div>
+          <div class="rc-stat"><div class="v" id="rcWorst">â€”</div><div class="k">Trade Terburuk</div></div>
         </div>
 
         <section class="page-card">
@@ -227,7 +227,7 @@
 
         <section class="page-card">
           <div class="drawer-section-title"><span>Insight Periode</span></div>
-          <div class="recap-box" id="recapInsight" style="white-space:normal">—</div>
+          <div class="recap-box" id="recapInsight" style="white-space:normal">â€”</div>
         </section>
       </div>
     </main>
@@ -238,7 +238,7 @@
         <div class="page-head">
           <div>
             <h1 class="page-title">Performance Recap &amp; Winrate Tracking</h1>
-            <p class="page-sub">Format identik dengan Topic #6 engine — Ponyin v5 · dihitung dari sinyal screener.</p>
+            <p class="page-sub">Format identik dengan Topic #6 engine â€” Ponyin v5 Â· dihitung dari sinyal screener.</p>
           </div>
           <div class="recap-tabs" id="engineTabs" style="min-width:340px">
             <button data-tf="daily" class="active">24 Jam</button>
@@ -248,13 +248,13 @@
           </div>
         </div>
 
-        <!-- [📈] Stats & Performance — tree gaya engine -->
+        <!-- [ðŸ“ˆ] Stats & Performance â€” tree gaya engine -->
         <section class="page-card recap-tree-card">
           <div class="term-chrome">
             <span class="term-dot" style="background:#ff5f57"></span>
             <span class="term-dot" style="background:#febc2e"></span>
             <span class="term-dot" style="background:#28c840"></span>
-            <span class="term-title mono">ponyin@engine: ~/recap — topic#6</span>
+            <span class="term-title mono">ponyin@engine: ~/recap â€” topic#6</span>
           </div>
           <div class="recap-tree-wrap">
             <div class="engine-tree mono" id="recapTree">Memuat...</div>
@@ -262,11 +262,11 @@
           </div>
         </section>
 
-        <!-- 🏆 Profit Milestones -->
+        <!-- ðŸ† Profit Milestones -->
         <section class="page-card">
           <div class="drawer-section-title">
-            <span>🏆 Profit Milestones</span>
-            <span class="sub"><b id="msCount" style="color:var(--lime)">0/7</b> tercapai · <a href="#" onclick="resetMilestones();return false" style="color:var(--text-4)">reset</a></span>
+            <span>ðŸ† Profit Milestones</span>
+            <span class="sub"><b id="msCount" style="color:var(--lime)">0/7</b> tercapai Â· <a href="#" onclick="resetMilestones();return false" style="color:var(--text-4)">reset</a></span>
           </div>
           <div class="ms-progress">
             <div class="ms-next-label" id="msNextLabel">Memuat progres...</div>
@@ -278,39 +278,39 @@
         <!-- Benchmark Hedge Fund Grade -->
         <div class="bench-grid" id="benchGrid">
           <div class="bench-card">
-            <div class="bench-name">🧮 Realized Avg R</div>
-            <div class="bench-val mono" id="benchR">—</div>
-            <div class="bench-bench">Standar institusi: ≥ +0.40R</div>
-            <div class="bench-status mono" id="benchRStatus">—</div>
+            <div class="bench-name">ðŸ§® Realized Avg R</div>
+            <div class="bench-val mono" id="benchR">â€”</div>
+            <div class="bench-bench">Standar institusi: â‰¥ +0.40R</div>
+            <div class="bench-status mono" id="benchRStatus">â€”</div>
           </div>
           <div class="bench-card">
-            <div class="bench-name">🧮 Profit Factor</div>
-            <div class="bench-val mono" id="benchPF">—</div>
-            <div class="bench-bench">Standar prop-firm: ≥ 1.75</div>
-            <div class="bench-status mono" id="benchPFStatus">—</div>
+            <div class="bench-name">ðŸ§® Profit Factor</div>
+            <div class="bench-val mono" id="benchPF">â€”</div>
+            <div class="bench-bench">Standar prop-firm: â‰¥ 1.75</div>
+            <div class="bench-status mono" id="benchPFStatus">â€”</div>
           </div>
           <div class="bench-card">
-            <div class="bench-name">🕒 Format Waktu Engine</div>
-            <div class="bench-val mono bench-val-sm" id="benchClock">—</div>
-            <div class="bench-bench">Dual precision · UTC</div>
+            <div class="bench-name">ðŸ•’ Format Waktu Engine</div>
+            <div class="bench-val mono bench-val-sm" id="benchClock">â€”</div>
+            <div class="bench-bench">Dual precision Â· UTC</div>
             <div class="bench-status mono dim">LIVE</div>
           </div>
         </div>
 
-        <!-- [📋] Recent Signals -->
+        <!-- [ðŸ“‹] Recent Signals -->
         <section class="page-card">
-          <div class="drawer-section-title"><span>[📋] Recent Signals</span><span class="sub" id="rsMeta">sesuai format engine</span></div>
+          <div class="drawer-section-title"><span>[ðŸ“‹] Recent Signals</span><span class="sub" id="rsMeta">sesuai format engine</span></div>
           <div class="table-wrap">
             <table class="data-table" id="recentSignalsTable">
               <thead>
-                <tr><th>ID</th><th>Token</th><th>Outcome</th><th class="num">MC Entry → Live</th><th class="num">PnL ATH → Now</th><th class="num">Peak ATH</th><th>Strat</th></tr>
+                <tr><th>ID</th><th>Token</th><th>Outcome</th><th class="num">MC Entry â†’ Live</th><th class="num">PnL ATH â†’ Now</th><th class="num">Peak ATH</th><th>Strat</th></tr>
               </thead>
               <tbody></tbody>
             </table>
             <div id="rsPager" style="display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:8px 6px 2px;">
-              <button class="btn" id="rsPrev" style="padding:4px 12px;font-size:11px;">‹ Sebelumnya</button>
-              <span id="rsPageInfo" style="font-size:11px;color:var(--text-3)">—</span>
-              <button class="btn" id="rsNext" style="padding:4px 12px;font-size:11px;">Berikutnya ›</button>
+              <button class="btn" id="rsPrev" style="padding:4px 12px;font-size:11px;">â€¹ Sebelumnya</button>
+              <span id="rsPageInfo" style="font-size:11px;color:var(--text-3)">â€”</span>
+              <button class="btn" id="rsNext" style="padding:4px 12px;font-size:11px;">Berikutnya â€º</button>
               <select id="rsPageSize" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
                 <option value="10">10 / hal</option>
                 <option value="25">25 / hal</option>
@@ -325,7 +325,7 @@
           </div>
         </section>
 
-        <p class="page-foot-hint">Win mengikuti aturan engine: <span class="mono">peak ≥ 1.5x</span> atau outcome ✅ · Lose: <span class="mono">current ≤ 0.7x &amp; peak &lt; 1.3x</span>. Laporan teks asli engine tersedia di server melalui <a href="/evaluasi" style="color:var(--lime)">Evaluasi</a>.</p>
+        <p class="page-foot-hint">Win mengikuti aturan engine: <span class="mono">peak â‰¥ 1.5x</span> atau outcome âœ… Â· Lose: <span class="mono">current â‰¤ 0.7x &amp; peak &lt; 1.3x</span>. Laporan teks asli engine tersedia di server melalui <a href="/evaluasi" style="color:var(--lime)">Evaluasi</a>.</p>
       </div>
     </main>
 
@@ -334,7 +334,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
       <div>
         <h1 class="page-title">Health Ping</h1>
-        <div style="font-size:11px;color:var(--text-3)" id="pingMeta">Memuat mirror state dari engine…</div>
+        <div style="font-size:11px;color:var(--text-3)" id="pingMeta">Memuat mirror state dari engineâ€¦</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <select id="tzSel" class="tz-sel" title="Zona waktu tampilan" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
@@ -345,52 +345,52 @@
           <option value="0">UTC</option>
           <option value="-5">UTC-5</option>
         </select>
-        <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
+        <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">â†» Refresh</button>
       </div>
     </div>
 
     <div class="hp-cards" style="margin-bottom:14px">
-      <div class="hp-card"><div class="hp-k">Kecepatan Baca DB</div><div class="hp-v mono" id="hpDbRead">—</div><div class="hp-s">0 kuota API</div></div>
-      <div class="hp-card"><div class="hp-k">Request Keluar</div><div class="hp-v mono" id="hpReq">—</div><div class="hp-s">GMGN sejak start</div></div>
-      <div class="hp-card"><div class="hp-k">200 OK</div><div class="hp-v mono" id="hpOk">—</div><div class="hp-s" id="hpCacheSub">—</div></div>
-      <div class="hp-card"><div class="hp-k">HTTP 429</div><div class="hp-v mono" id="hp429">—</div><div class="hp-s" id="hp429Sub">—</div></div>
-      <div class="hp-card"><div class="hp-k">Slot Siap</div><div class="hp-v mono" id="hpReady">—</div><div class="hp-s" id="hpReadySub">dari 15 slot</div></div>
-      <div class="hp-card"><div class="hp-k">Kuota API Health Ping</div><div class="hp-v mono" id="hpQuota">0</div><div class="hp-s" id="hpQuotaSub">req eksternal · 0 = bersih</div></div>
+      <div class="hp-card"><div class="hp-k">Kecepatan Baca DB</div><div class="hp-v mono" id="hpDbRead">â€”</div><div class="hp-s">0 kuota API</div></div>
+      <div class="hp-card"><div class="hp-k">Request Keluar</div><div class="hp-v mono" id="hpReq">â€”</div><div class="hp-s">GMGN sejak start</div></div>
+      <div class="hp-card"><div class="hp-k">200 OK</div><div class="hp-v mono" id="hpOk">â€”</div><div class="hp-s" id="hpCacheSub">â€”</div></div>
+      <div class="hp-card"><div class="hp-k">HTTP 429</div><div class="hp-v mono" id="hp429">â€”</div><div class="hp-s" id="hp429Sub">â€”</div></div>
+      <div class="hp-card"><div class="hp-k">Slot Siap</div><div class="hp-v mono" id="hpReady">â€”</div><div class="hp-s" id="hpReadySub">dari 15 slot</div></div>
+      <div class="hp-card"><div class="hp-k">Kuota API Health Ping</div><div class="hp-v mono" id="hpQuota">0</div><div class="hp-s" id="hpQuotaSub">req eksternal Â· 0 = bersih</div></div>
     </div>
 
     <section class="page-card" style="margin-bottom:14px">
-      <div class="hp-title">🖥️ SERVER &amp; HARDWARE STATUS</div>
+      <div class="hp-title">ðŸ–¥ï¸ SERVER &amp; HARDWARE STATUS</div>
       <div class="hp-grid">
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot RAM</div><div class="hp-api-lat" id="hwBotRam">—</div><div class="hp-api-sub">proses bot_server</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot CPU</div><div class="hp-api-lat" id="hwBotCpu">—</div><div class="hp-api-sub">proses bot_server</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host RAM</div><div class="hp-api-lat" id="hwHostRam">—</div><div class="hp-api-sub" id="hwHostRamSub">—</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host CPU</div><div class="hp-api-lat" id="hwHostCpu">—</div><div class="hp-api-sub">total usage</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot RAM</div><div class="hp-api-lat" id="hwBotRam">â€”</div><div class="hp-api-sub">proses bot_server</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot CPU</div><div class="hp-api-lat" id="hwBotCpu">â€”</div><div class="hp-api-sub">proses bot_server</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host RAM</div><div class="hp-api-lat" id="hwHostRam">â€”</div><div class="hp-api-sub" id="hwHostRamSub">â€”</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host CPU</div><div class="hp-api-lat" id="hwHostCpu">â€”</div><div class="hp-api-sub">total usage</div></div>
       </div>
     </section>
 
     <section class="page-card" style="margin-bottom:14px">
-      <div class="hp-title">🗄️ DATABASE &amp; DATA INTEGRITY</div>
+      <div class="hp-title">ðŸ—„ï¸ DATABASE &amp; DATA INTEGRITY</div>
       <div class="hp-grid">
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">SQLITE</span></div><div class="hp-api-name">Status Database</div><div class="hp-api-lat" id="dbStatus" style="font-size:13px">—</div><div class="hp-api-sub">WAL Mode Active</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DATA</span></div><div class="hp-api-name">Data Signal</div><div class="hp-api-lat" id="dbSignals">—</div><div class="hp-s">baris signals</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DATA SM</span></div><div class="hp-api-name">Data SM</div><div class="hp-api-lat" id="dbSM">—</div><div class="hp-s">Smart Money</div></div>
-        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DEMO</span></div><div class="hp-api-name">Posisi Demo Aktif</div><div class="hp-api-lat" id="dbPositions">—</div><div class="hp-s">posisi terbuka</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">SQLITE</span></div><div class="hp-api-name">Status Database</div><div class="hp-api-lat" id="dbStatus" style="font-size:13px">â€”</div><div class="hp-api-sub">WAL Mode Active</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DATA</span></div><div class="hp-api-name">Data Signal</div><div class="hp-api-lat" id="dbSignals">â€”</div><div class="hp-s">baris signals</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DATA SM</span></div><div class="hp-api-name">Data SM</div><div class="hp-api-lat" id="dbSM">â€”</div><div class="hp-s">Smart Money</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DEMO</span></div><div class="hp-api-name">Posisi Demo Aktif</div><div class="hp-api-lat" id="dbPositions">â€”</div><div class="hp-s">posisi terbuka</div></div>
       </div>
     </section>
 
     <section class="page-card" style="margin-bottom:14px">
-      <div class="hp-title">🌐 INFRASTRUKTUR EKSEKUSI</div>
+      <div class="hp-title">ðŸŒ INFRASTRUKTUR EKSEKUSI</div>
       <div class="hp-grid" id="hpInfra"></div>
     </section>
 
     <section class="page-card" style="margin-bottom:14px">
-      <div class="hp-title">🛡️ 15-SLOT GMGN DECADUAL SHIELD <span class="mono" style="font-size:10px;color:var(--text-4)">— Multi-WARP &amp; Ed25519 (50ms Pipelined)</span></div>
+      <div class="hp-title">ðŸ›¡ï¸ 15-SLOT GMGN DECADUAL SHIELD <span class="mono" style="font-size:10px;color:var(--text-4)">â€” Multi-WARP &amp; Ed25519 (50ms Pipelined)</span></div>
       <div class="hp-grid" id="hpSlots"></div>
     </section>
 
     <details>
       <summary class="mono" style="font-size:11px;color:var(--text-3);cursor:pointer">Format teks engine (/ping)</summary>
-      <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px;margin-top:8px">—</div>
+      <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px;margin-top:8px">â€”</div>
     </details>
   </main>
 
@@ -400,7 +400,7 @@
         <div class="page-head">
           <div>
             <h1 class="page-title">System Logs</h1>
-            <p class="page-sub">Watchdog · Alerts · Engine · Trade — dikumpulkan bridge secara live, buffer 800 event.</p>
+            <p class="page-sub">Watchdog Â· Alerts Â· Engine Â· Trade â€” dikumpulkan bridge secara live, buffer 800 event.</p>
           </div>
           <div class="log-toolbar">
             <div class="segmented" id="logFilter">
@@ -421,7 +421,7 @@
         </section>
 
         <section class="page-card hidden" id="telemetryCard">
-          <div class="drawer-section-title"><span>[📡] Engine Telemetry</span><span class="sub">system_telemetry_history — 40 baris terakhir</span></div>
+          <div class="drawer-section-title"><span>[ðŸ“¡] Engine Telemetry</span><span class="sub">system_telemetry_history â€” 40 baris terakhir</span></div>
           <div class="table-wrap">
             <table class="data-table" id="telemetryTable">
               <thead><tr><th>Waktu (UTC)</th><th class="num">RPC Slot</th><th class="num">RPC ms</th><th class="num">Jupiter ms</th><th class="num">DexScreener ms</th><th class="num">Rugcheck ms</th><th class="num">Jito ms</th><th class="num">Posisi</th><th class="num">Sinyal</th></tr></thead>
@@ -431,7 +431,7 @@
         </section>
 
         <section class="page-card hidden" id="engineFileCard">
-          <div class="drawer-section-title"><span>[📄] Engine Log File</span><span class="sub mono">ENGINE_LOG_FILE</span></div>
+          <div class="drawer-section-title"><span>[ðŸ“„] Engine Log File</span><span class="sub mono">ENGINE_LOG_FILE</span></div>
           <div id="engineFileBox" class="recap-box" style="max-height:320px;overflow-y:auto"></div>
         </section>
       </div>
@@ -442,29 +442,29 @@
       <div class="sb-brand">
         <img src="/logo.svg" alt="" width="15" height="15">
         <span>ScreenerNantiAja</span>
-        <span class="sb-sep">·</span>
+        <span class="sb-sep">Â·</span>
         <span class="sb-dim">Ponyin v5.0</span>
       </div>
 
       <div class="sb-metrics">
-        <button id="connPill" class="conn-pill is-connecting sb-pill" title="Status koneksi ke engine — klik saat offline untuk sambung ulang">
+        <button id="connPill" class="conn-pill is-connecting sb-pill" title="Status koneksi ke engine â€” klik saat offline untuk sambung ulang">
           <span class="dot"></span>
           <span id="connLabel">MENGHUBUNGKAN</span>
         </button>
         <span class="sb-item" id="sbHealth" title="Health engine: DB reachable (40) + tick freshness (40) + modul engine (20)">
-          <span class="sb-k">HEALTH</span> <b class="mono">—</b>
+          <span class="sb-k">HEALTH</span> <b class="mono">â€”</b>
         </span>
         <span class="sb-item" id="sbSol" title="Harga SOL live (DexScreener, cache 30s)">
-          <span class="sb-k">SOL</span> <b class="mono">—</b>
+          <span class="sb-k">SOL</span> <b class="mono">â€”</b>
         </span>
         <span class="sb-item" id="sbGas" title="Biaya jaringan: base fee + priority fee engine">
-          <span class="sb-k">GAS</span> <b class="mono">—</b>
+          <span class="sb-k">GAS</span> <b class="mono">â€”</b>
         </span>
         <span class="sb-item" id="sbEngine" title="Kecepatan engine: sync DB terakhir & rata-rata">
-          <span class="sb-k">ENGINE</span> <b class="mono">—</b>
+          <span class="sb-k">ENGINE</span> <b class="mono">â€”</b>
         </span>
         <span class="sb-item" id="sbWs" title="Klien WebSocket terhubung & umur bridge">
-          <span class="sb-k">WS</span> <b class="mono">—</b>
+          <span class="sb-k">WS</span> <b class="mono">â€”</b>
         </span>
       </div>
 
@@ -557,7 +557,7 @@
             </div>
           </div>
           <div style="margin-top:8px;font-size:10.5px;color:var(--text-4);line-height:1.4">
-            💡 Seluruh angka PnL, grafik performa, dan riwayat yang tampil saat ini terisolasi murni di dompet demo ini.
+            ðŸ’¡ Seluruh angka PnL, grafik performa, dan riwayat yang tampil saat ini terisolasi murni di dompet demo ini.
           </div>
         </div>
 
@@ -578,7 +578,7 @@
             </div>
             <div style="text-align:right">
               <span class="field-label" style="margin:0 0 2px">Saldo Riil</span>
-              <span id="drawerWalletSol" class="mono" style="font-size:15px;font-weight:800;color:var(--text-1)">—</span>
+              <span id="drawerWalletSol" class="mono" style="font-size:15px;font-weight:800;color:var(--text-1)">â€”</span>
             </div>
           </div>
 
@@ -622,13 +622,13 @@
 
           <div class="auto-card-status">
             <div class="auto-status-item">
-              <span class="auto-dot on"></span> Radar scanner 24/7 — <b>AKTIF</b>
+              <span class="auto-dot on"></span> Radar scanner 24/7 â€” <b>AKTIF</b>
             </div>
             <div class="auto-status-item">
-              <span class="auto-dot on"></span> Paper exit loop (TP/SL otomatis) — <b>AKTIF</b>
+              <span class="auto-dot on"></span> Paper exit loop (TP/SL otomatis) â€” <b>AKTIF</b>
             </div>
             <div class="auto-status-item">
-              <span class="auto-dot" id="autoDotReal"></span> Auto-buy saldo riil — <b id="autoStateReal">MATI</b>
+              <span class="auto-dot" id="autoDotReal"></span> Auto-buy saldo riil â€” <b id="autoStateReal">MATI</b>
             </div>
           </div>
 
@@ -663,8 +663,8 @@
                 <div class="stepper-input-wrap">
                   <input type="number" step="0.5" min="0.5" max="100" id="settingMinUsd" class="input" value="2.0">
                   <div class="stepper-btns">
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', 0.5)">▲</button>
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', -0.5)">▼</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', 0.5)">â–²</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', -0.5)">â–¼</button>
                   </div>
                 </div>
               </div>
@@ -673,8 +673,8 @@
                 <div class="stepper-input-wrap">
                   <input type="number" step="0.5" min="1.0" max="500" id="settingMaxUsd" class="input" value="5.0">
                   <div class="stepper-btns">
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', 0.5)">▲</button>
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', -0.5)">▼</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', 0.5)">â–²</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', -0.5)">â–¼</button>
                   </div>
                 </div>
               </div>
@@ -687,8 +687,8 @@
                 <div class="stepper-input-wrap">
                   <input type="number" step="0.01" min="0.01" max="5" id="settingMinSol" class="input" value="0.05">
                   <div class="stepper-btns">
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', 0.01)">▲</button>
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', -0.01)">▼</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', 0.01)">â–²</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', -0.01)">â–¼</button>
                   </div>
                 </div>
               </div>
@@ -697,18 +697,18 @@
                 <div class="stepper-input-wrap">
                   <input type="number" step="0.01" min="0.01" max="10" id="settingMaxSol" class="input" value="0.20">
                   <div class="stepper-btns">
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', 0.01)">▲</button>
-                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', -0.01)">▼</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', 0.01)">â–²</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', -0.01)">â–¼</button>
                   </div>
                 </div>
               </div>
             </div>
 
             <div style="margin-top:7px;padding:8px 10px;background:var(--bg-2);border-radius:var(--r-sm);border:1px solid var(--border-1);font-family:var(--font-mono);font-size:10.5px;color:var(--text-3);line-height:1.4">
-              🎯 <b>Simulasi Eksekusi Adaptif:</b><br>
-              • Sinyal Standard (Skor 80, 1 SM): Beli batas bawah (<span id="simMinLabel">$2.00</span>)<br>
-              • Sinyal High-Conviction (Skor 92, Liq 30%+, 3 SM): Beli dinamis ~<span id="simMidLabel" style="color:var(--lime);font-weight:700">$3.65</span><br>
-              • Sinyal Runner Mutlak (Skor 98, 6+ SM): Beli batas atas (<span id="simMaxLabel">$5.00</span>)
+              ðŸŽ¯ <b>Simulasi Eksekusi Adaptif:</b><br>
+              â€¢ Sinyal Standard (Skor 80, 1 SM): Beli batas bawah (<span id="simMinLabel">$2.00</span>)<br>
+              â€¢ Sinyal High-Conviction (Skor 92, Liq 30%+, 3 SM): Beli dinamis ~<span id="simMidLabel" style="color:var(--lime);font-weight:700">$3.65</span><br>
+              â€¢ Sinyal Runner Mutlak (Skor 98, 6+ SM): Beli batas atas (<span id="simMaxLabel">$5.00</span>)
             </div>
           </div>
 
@@ -721,8 +721,8 @@
                 </button>
                 <input type="number" step="1" min="1" max="100" id="settingSlippage" class="slippage-input-field" value="15" aria-label="Slippage percentage">
                 <div class="stepper-btns">
-                  <button type="button" class="stepper-btn" id="stepSlippageUp" onclick="stepInput('settingSlippage', 1)">▲</button>
-                  <button type="button" class="stepper-btn" id="stepSlippageDown" onclick="stepInput('settingSlippage', -1)">▼</button>
+                  <button type="button" class="stepper-btn" id="stepSlippageUp" onclick="stepInput('settingSlippage', 1)">â–²</button>
+                  <button type="button" class="stepper-btn" id="stepSlippageDown" onclick="stepInput('settingSlippage', -1)">â–¼</button>
                 </div>
               </div>
             </div>
@@ -753,7 +753,7 @@
           <div style="font-size:13px;font-weight:800">Import Wallet Sendiri</div>
           <div class="warn-banner">
             <svg class="icon" style="flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4m0 4h.01"/></svg>
-            <span>Import akan <b>menggantikan</b> wallet engine saat ini. Pindahkan dulu sisa saldo dari wallet lama sebelum import — private key lama tidak bisa dipulihkan dari dashboard.</span>
+            <span>Import akan <b>menggantikan</b> wallet engine saat ini. Pindahkan dulu sisa saldo dari wallet lama sebelum import â€” private key lama tidak bisa dipulihkan dari dashboard.</span>
           </div>
           <div>
             <label class="field-label" for="importPkInput">Private Key (Base58 / Hex)</label>
@@ -814,7 +814,7 @@
           <span id="tradeActionIcon" class="trade-action-icon buy"></span>
           <div>
             <div id="tradeTitle" class="mono" style="font-size:14px;font-weight:800">Beli $TOKEN</div>
-            <div id="tradeSubtitle" style="font-size:10.5px;color:var(--text-3)">—</div>
+            <div id="tradeSubtitle" style="font-size:10.5px;color:var(--text-3)">â€”</div>
           </div>
         </div>
         <button class="icon-btn" onclick="closeTradeModal()" aria-label="Tutup trade">
@@ -827,8 +827,8 @@
         <div id="tradeModeWrap">
           <span class="field-label">Mode Eksekusi</span>
           <div class="segmented" id="tradeModeSeg">
-            <button data-mode="paper" class="active">Paper — Sandbox</button>
-            <button data-mode="live" id="tradeModeLiveBtn">Live — Saldo Riil</button>
+            <button data-mode="paper" class="active">Paper â€” Sandbox</button>
+            <button data-mode="live" id="tradeModeLiveBtn">Live â€” Saldo Riil</button>
           </div>
           <div id="tradeModeHint" class="kpi-foot" style="font-size:10.5px;margin-top:6px">Order virtual memakai saldo sandbox. Tidak ada dana riil yang tersentuh.</div>
         </div>
@@ -859,9 +859,9 @@
 
         <!-- Preview box (buy) -->
         <div id="tradePreview" class="trade-preview">
-          <div class="tp-row"><span>Estimasi token diterima</span><b class="mono" id="tpTokens">—</b></div>
-          <div class="tp-row"><span>Price impact</span><b class="mono" id="tpImpact">—</b></div>
-          <div class="tp-row"><span>Slippage maks</span><b class="mono" id="tpSlippage">—</b></div>
+          <div class="tp-row"><span>Estimasi token diterima</span><b class="mono" id="tpTokens">â€”</b></div>
+          <div class="tp-row"><span>Price impact</span><b class="mono" id="tpImpact">â€”</b></div>
+          <div class="tp-row"><span>Slippage maks</span><b class="mono" id="tpSlippage">â€”</b></div>
         </div>
 
         <!-- Live warning -->
@@ -870,7 +870,7 @@
           <span><b>Eksekusi RIIL.</b> Swap on-chain akan dikirim dari wallet engine memakai dana asli. Tidak ada jalan kembali setelah tx dikonfirmasi.</span>
         </div>
 
-        <button id="tradeConfirmBtn" class="btn btn-solid" style="width:100%;padding:11px" onclick="submitTrade()">Konfirmasi Beli — 0.1 SOL</button>
+        <button id="tradeConfirmBtn" class="btn btn-solid" style="width:100%;padding:11px" onclick="submitTrade()">Konfirmasi Beli â€” 0.1 SOL</button>
       </div>
     </div>
   </div>
@@ -881,6 +881,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260907f"></script>
+  <script src="/app.js?v=20260907k"></script>
 </body>
 </html>

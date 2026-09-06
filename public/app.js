@@ -734,6 +734,7 @@ function buildPositionCard(pos) {
       <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
       <div style="display:flex;align-items:center;gap:9px">
         <span class="sig-age" data-ref="age"></span>
+        <button class="pos-detail-btn" title="Detail transaksi, target TP & proteksi risiko" onclick="event.stopPropagation();openPositionDetail(${parseInt(pos.id) || 0}, 'open')">${I.info}</button>
         <button class="btn btn-danger" onclick="event.stopPropagation();openTradeModal({action:'sell', positionId:${parseInt(pos.id) || 0}, symbol:'${jsq(pos.symbol)}', tokenCa:'${jsq(pos.token_ca)}', tokensRemaining:${parseFloat(pos.tokens_remaining) || 0}, entryPrice:${parseFloat(pos.entry_price_usd) || 0}, currentPrice:${parseFloat(pos.current_price_usd) || 0}, solSpent:${parseFloat(pos.sol_spent) || 0}})">Jual</button>
       </div>
     </div>`;
@@ -773,9 +774,11 @@ function updatePositionCard(pos) {
     if (hit) {
       const t1sol = parseFloat(pos.tp1_sol_realized) || 0;
       const sisa = parseFloat(pos.tokens_remaining) || 0;
+      const dec = parseInt(pos.token_decimals) || 0;
+      const uiSisa = sisa / Math.pow(10, dec);   // DB menyimpan unit raw Jupiter
       t1box.style.display = 'block';
       if (entry.refs.tp1line) entry.refs.tp1line.textContent = `+${t1sol.toFixed(4)} SOL`;
-      if (entry.refs.tp2line) entry.refs.tp2line.textContent = `${Math.round(sisa).toLocaleString('en-US')} tkn Running`;
+      if (entry.refs.tp2line) entry.refs.tp2line.textContent = `${Math.round(uiSisa).toLocaleString('en-US')} tkn Running`;
     } else {
       t1box.style.display = 'none';
     }
@@ -826,6 +829,7 @@ function renderHistory() {
         <div class="hist-symbol-row">
           <span class="hist-symbol">$${esc(pos.symbol)}</span>
           <span class="hist-result ${cls}">${label}</span>
+          <button class="pos-detail-btn" style="width:20px;height:20px" title="Detail transaksi & proteksi risiko" onclick="event.stopPropagation();openPositionDetail(${parseInt(pos.id) || 0}, 'closed')">${I.info}</button>
         </div>
         <div class="hist-sub">${fmtSol(pos.sol_spent, 3)} SOL → ${fmtSol(pos.realized_sol, 3)} SOL (${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)}) · hold ${fmtHold(pos.hold_duration_sec)}</div>
       </div>
@@ -857,6 +861,183 @@ function renderHistory() {
     }
     return mainRow + tranches;
   }).join('');
+}
+
+/* ---------------- Detail posisi (transaksi, target TP, proteksi risiko) ---------------- */
+
+// Konfigurasi auto-exit engine; diperbarui dari /api/positions (risk_config).
+let RISK_CONFIG = {
+  tp1_trigger_mult: 1.40,
+  tp1_sell_pct: 71.4,
+  trailing_arm_mult: 1.80,
+  trailing_drawdown_min_pct: 15,
+  trailing_drawdown_max_pct: 28,
+  hard_stop_loss_pct: 25,
+  stagnancy_max_hold_min: 25
+};
+
+let pdEl = null;
+function ensurePdEl() {
+  if (pdEl) return pdEl;
+  pdEl = document.createElement('div');
+  pdEl.id = 'posDetailOverlay';
+  pdEl.className = 'pd-overlay hidden';
+  pdEl.addEventListener('click', e => { if (e.target === pdEl) closePositionDetail(); });
+  document.body.appendChild(pdEl);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePositionDetail(); });
+  return pdEl;
+}
+function closePositionDetail() {
+  if (!pdEl) return;
+  pdEl.classList.remove('open');
+  setTimeout(() => pdEl && pdEl.classList.add('hidden'), 180);
+}
+
+function pdRow(label, valueHtml, cls = '') {
+  return `<div class="pd-row ${cls}"><span class="pd-k">${label}</span><span class="pd-v">${valueHtml}</span></div>`;
+}
+function pdBar(pct, color) {
+  return `<div class="pd-track"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%;background:${color}"></i></div>`;
+}
+function pdHoldSec(pos) {
+  const startT = parseTs(pos.created_at);
+  if (!startT) return 0;
+  const endT = pos.closed_at ? parseTs(pos.closed_at) : null;
+  return Math.max(0, ((endT || Date.now()) - startT) / 1000);
+}
+function pdFmtDur(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  if (m >= 60) return `${Math.floor(m / 60)}j ${m % 60}m`;
+  return `${m}m ${s}s`;
+}
+
+function openPositionDetail(id, kind) {
+  const src = kind === 'closed' ? state.closedPositions : state.activePositions;
+  const pos = src.find(p => parseInt(p.id) === parseInt(id));
+  if (!pos) { toast('Data posisi tidak ditemukan', 'error'); return; }
+
+  const rc = RISK_CONFIG;
+  const closed = (pos.status || '').toUpperCase() !== 'OPEN';
+  const entry = parseFloat(pos.entry_price_usd) || 0;
+  const entryMc = parseFloat(pos.entry_mcap) || 0;
+  const live = parseFloat(pos.current_price_usd) || 0;
+  const mult = (entry > 0 && live > 0) ? live / entry : 1;
+  const spent = parseFloat(pos.sol_spent) || 0;
+  const realized = parseFloat(pos.realized_sol) || 0;
+  const remaining = parseFloat(pos.tokens_remaining) || 0;
+  // DB menyimpan token dalam unit raw (Jupiter API); konversi ke unit UI.
+  const dec = parseInt(pos.token_decimals) || 0;
+  const uiRemaining = remaining / Math.pow(10, dec);
+  const uiBought = (parseFloat(pos.tokens_bought) || 0) / Math.pow(10, dec);
+  const solPrice = networkState.sol_price_usd || 0;
+  const remainUsd = uiRemaining * live;
+  const remainSol = solPrice > 0 ? remainUsd / solPrice : 0;
+  const estPnlSol = realized + remainSol - spent;
+  const peakMult = parseFloat(pos.peak_multiplier) || mult || 1;
+
+  // --- Target TP ---
+  const tp1Hit = parseInt(pos.tp1_hit) === 1 || pos.tp1_hit === true;
+  const tp1TargetPrice = entry * rc.tp1_trigger_mult;
+  const tp1TargetMc = entryMc * rc.tp1_trigger_mult;
+  const tp1Progress = tp1Hit ? 100 : Math.max(0, Math.min(100, ((mult - 1) / (rc.tp1_trigger_mult - 1)) * 100));
+  const tp1Sol = parseFloat(pos.tp1_sol_realized) || 0;
+  const tp1GapPct = (rc.tp1_trigger_mult - mult) / mult * 100;
+  const trailingArmed = peakMult >= rc.trailing_arm_mult;
+  const trailingFinal = realized - tp1Sol;
+
+  // --- Proteksi risiko ---
+  const slPrice = entry * (1 - rc.hard_stop_loss_pct / 100);
+  const slDistPct = (live > 0 && slPrice > 0) ? ((live - slPrice) / live) * 100 : 0;
+  const holdSec = pdHoldSec(pos);
+  const stagRemainSec = Math.max(0, rc.stagnancy_max_hold_min * 60 - holdSec);
+  const troughMc = parseFloat(pos.trough_mcap) || 0;
+  const maeMult = (troughMc > 0 && entryMc > 0) ? troughMc / entryMc : 1;
+
+  const exitReason = (pos.exit_reason || '').toUpperCase();
+  const exitLabel = exitReason.includes('TP') ? 'TAKE PROFIT' : exitReason.includes('SL') ? 'STOP LOSS'
+    : exitReason.includes('TRAILING') ? 'TRAILING STOP' : exitReason.includes('STAGNANCY') ? 'STAGNANCY CUT' : closed ? 'CLOSED' : 'RUNNING';
+  const pnlSol = realized - spent;
+
+  const ca = pos.token_ca || '';
+  const links = ca ? `
+    <a href="https://gmgn.ai/sol/token/${esc(ca)}" target="_blank" rel="noopener">GMGN</a>
+    <a href="https://dexscreener.com/solana/${esc(ca)}" target="_blank" rel="noopener">DexScreener</a>
+    <a href="https://solscan.io/token/${esc(ca)}" target="_blank" rel="noopener">Solscan</a>` : '';
+
+  const html = `
+  <div class="pd-panel">
+    <div class="pd-head">
+      <div class="pd-title">
+        ${avatarHTML(ca, pos.symbol)}
+        <div>
+          <div class="pd-sym">$${esc(pos.symbol)} <span class="chip ${closed ? 'chip-cyan' : 'chip-lime'}" style="font-size:9px">${exitLabel}</span></div>
+          <div class="pd-sub">${fmtSol(spent, 3)} SOL · ${closed ? 'ditutup' : 'berjalan'} ${pdFmtDur(holdSec)}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-weight:800;font-size:16px;color:${estPnlSol >= 0 ? 'var(--green)' : 'var(--red)'}">${closed ? '' : '≈ '}${estPnlSol >= 0 ? '+' : ''}${estPnlSol.toFixed(4)} SOL</span>
+        <button class="pos-detail-btn" title="Tutup" onclick="closePositionDetail()">✕</button>
+      </div>
+    </div>
+
+    <div class="pd-body">
+      <div class="pd-sec">
+        <div class="pd-sec-title">⛓️ Transaksi &amp; Eksekusi</div>
+        ${pdRow('CA Token', `<span class="mono">${esc(ca.slice(0, 10))}…${esc(ca.slice(-6))}</span> <button class="pd-copy" onclick="copyCA('${jsq(ca)}')">${I.copy}</button>`)}
+        ${pdRow('Rute Eksekusi', esc(pos.execution_route || 'Jupiter Quote'))}
+        ${pdRow('Waktu Entry', esc(String(pos.created_at || '').replace('T', ' ').slice(0, 19) || '—') + ' UTC')}
+        ${pdRow('Harga Entry', fmtPosPrice(entry) + (entryMc > 0 ? ` <span class="pd-dim">· MC ${fmtUSD(entryMc)}</span>` : ''))}
+        ${pdRow('Modal', fmtSol(spent, 4) + ' SOL')}
+        ${pdRow('Token Dibeli', Math.round(uiBought).toLocaleString('en-US') + ` <span class="pd-dim">tkn</span>`)}
+        ${closed ? pdRow('Harga Exit', fmtPosPrice(parseFloat(pos.exit_price_usd) || 0)) : pdRow('Harga Live', fmtPosPrice(live) + ` <span class="pd-dim">· ${mult.toFixed(2)}x</span>`)}
+        ${pdRow('Slippage', (parseFloat(pos.slippage_impact_pct) || 0).toFixed(2) + '%')}
+        ${pdRow('Sumber Data', esc(pos.entry_data_source || 'DexScreener + Jupiter quote'))}
+        <div class="pd-note">🔗 Verifikasi on-chain: ${links || '<span class="pd-dim">—</span>'}</div>
+        <div class="pd-note pd-note-dim">ℹ️ Mode Demo (REAL_TRADING=0): swap disimulasikan dengan <b>quote Jupiter &amp; harga DEX riil</b> — belum ada signature transfer on-chain. Saat mode riil aktif, signature entry/exit akan tercantum di sini.</div>
+      </div>
+
+      <div class="pd-sec">
+        <div class="pd-sec-title">🎯 Target Take-Profit</div>
+        <div class="pd-row"><span class="pd-k">TP1 ${tp1Hit ? '— TERTUNCI ✓' : `— jarak ${tp1GapPct > 0 ? tp1GapPct.toFixed(1) + '%' : '—'}`}</span>
+          <span class="pd-v">+40% → ${fmtPosPrice(tp1TargetPrice)} <span class="pd-dim">· MC ${fmtUSD(tp1TargetMc)}</span></span></div>
+        ${pdBar(tp1Progress, tp1Hit ? 'var(--green)' : 'var(--lime)')}
+        ${tp1Hit
+          ? pdRow('Hasil TP1', `<span style="color:var(--green)">+${tp1Sol.toFixed(4)} SOL</span> <span class="pd-dim">(jual ${rc.tp1_sell_pct}% — modal BEP)</span>`)
+          : pdRow('Rencana TP1', `Jual ${rc.tp1_sell_pct}% — menarik 100% modal (BEP)`, '')}
+        <div class="pd-row" style="margin-top:8px"><span class="pd-k">Trailing Stop ${trailingArmed ? '— <span style="color:var(--cyan)">ARMED</span>' : `— arm di ${rc.trailing_arm_mult}x`}</span>
+          <span class="pd-v">Peak ${peakMult.toFixed(2)}x</span></div>
+        ${pdBar(trailingArmed ? 100 : (peakMult / rc.trailing_arm_mult) * 100, trailingArmed ? 'var(--cyan)' : 'var(--bg-4)')}
+        ${pdRow('Mekanisme', `Adaptif −${rc.trailing_drawdown_min_pct}% s/d −${rc.trailing_drawdown_max_pct}% (by Likuiditas &amp; OFI)`)}
+        ${closed ? (trailingFinal !== 0 ? pdRow('Hasil Trailing/Final', `<span style="color:${trailingFinal >= 0 ? 'var(--green)' : 'var(--red)'}">${trailingFinal >= 0 ? '+' : ''}${trailingFinal.toFixed(4)} SOL</span>`) : '') : pdRow('Moonbag', `${Math.round(uiRemaining).toLocaleString('en-US')} tkn berjalan <span class="pd-dim">≈ $${remainUsd >= 100 ? remainUsd.toFixed(0) : remainUsd.toFixed(2)} · ${remainSol.toFixed(4)} SOL</span>`)}
+      </div>
+
+      <div class="pd-sec">
+        <div class="pd-sec-title">🛡️ Proteksi Risiko</div>
+        <div class="pd-row"><span class="pd-k">Hard Stop-Loss (−${rc.hard_stop_loss_pct}%)</span>
+          <span class="pd-v">${fmtPosPrice(slPrice)} <span class="pd-dim">· jarak ${slDistPct.toFixed(1)}%</span></span></div>
+        ${pdBar(Math.max(0, Math.min(100, 100 - slDistPct)), 'var(--red)')}
+        ${pdRow('Stagnancy Cut', `${rc.stagnancy_max_hold_min} menit max hold`, '')}
+        ${closed
+          ? pdRow('Hold Final', pdFmtDur(parseFloat(pos.hold_duration_sec) || holdSec))
+          : (stagRemainSec > 0
+              ? pdRow('Hold Saat Ini', `${pdFmtDur(holdSec)} <span class="pd-dim">· sisa ${pdFmtDur(stagRemainSec)}</span>`)
+              : pdRow('Hold Saat Ini', `${pdFmtDur(holdSec)} <span class="pd-dim">· &gt;${rc.stagnancy_max_hold_min}m — cut aktif bila volume mati</span>`))}
+        ${pdRow('Peak / MFE', `${peakMult.toFixed(2)}x`, '')}
+        ${pdRow('Trough / MAE', `${maeMult.toFixed(2)}x`, '')}
+        ${pdRow('R-Result', pos.r_result !== null && pos.r_result !== undefined && pos.r_result !== '' ? `${parseFloat(pos.r_result) >= 0 ? '+' : ''}${parseFloat(pos.r_result).toFixed(2)}R` : '—')}
+        <div class="pd-row" style="margin-top:8px"><span class="pd-k">Proteksi Entry</span>
+          <span class="pd-v">Score <b style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</b></span></div>
+        ${pdRow('Bundler / Top10', `${(parseFloat(pos.bundler_pct) || 0).toFixed(1)}% / ${(parseFloat(pos.top10_supply_pct) || 0).toFixed(1)}%`)}
+        ${pdRow('Smart Money', `${parseInt(pos.sm_count) || 0} SM`)}
+        ${pdRow('Likuiditas Entry', fmtUSD(pos.liquidity_usd))}
+      </div>
+    </div>
+  </div>`;
+
+  const el = ensurePdEl();
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  requestAnimationFrame(() => el.classList.add('open'));
 }
 
 /* ---------------- Profit milestones ---------------- */
@@ -1214,6 +1395,7 @@ async function httpBootstrap() {
     if (rPos && !state.lastTickAt) {
       state.activePositions = rPos.active || [];
       state.closedPositions = rPos.closed || [];
+      if (rPos.risk_config) RISK_CONFIG = { ...RISK_CONFIG, ...rPos.risk_config };
     }
     if (!state.lastTickAt) {
       renderSignals();
@@ -1819,6 +2001,7 @@ async function selectWalletMode(mode) {
       fetch(`/api/positions?wallet_mode=${activeWalletMode}`).then(r => r.json()),
       fetch(`/api/stats?wallet_mode=${activeWalletMode}`).then(r => r.json())
     ]);
+    if (pRes?.risk_config) RISK_CONFIG = { ...RISK_CONFIG, ...pRes.risk_config };
     if (isReal) {
       if (sRes?.data) {
         window._realStats = sRes.data;
