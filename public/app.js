@@ -1014,7 +1014,9 @@ function openPositionDetail(id, kind) {
       <div class="pd-sec">
         <div class="pd-sec-title">🛡️ Proteksi Risiko</div>
         <div class="pd-row"><span class="pd-k">Hard Stop-Loss (−${rc.hard_stop_loss_pct}%)</span>
-          <span class="pd-v">${fmtPosPrice(slPrice)} <span class="pd-dim">· jarak ${slDistPct.toFixed(1)}%</span></span></div>
+          <span class="pd-v">${fmtPosPrice(slPrice)} ${slDistPct >= 0
+            ? `<span class="pd-dim">· jarak ${slDistPct.toFixed(1)}%</span>`
+            : `<span style="color:var(--red)">· TEMBUS ${Math.abs(slDistPct).toFixed(1)}%</span>`}</span></div>
         ${pdBar(Math.max(0, Math.min(100, 100 - slDistPct)), 'var(--red)')}
         ${pdRow('Stagnancy Cut', `${rc.stagnancy_max_hold_min} menit max hold`, '')}
         ${closed
