@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from collections import deque
+from urllib.parse import urlparse
 from aiohttp import web, ClientSession, ClientTimeout
 # ---------------------------------------------------------------------------
 # Engine linkage.
@@ -200,8 +201,9 @@ def sync_ram_state_from_engine_db():
         conn = get_db_connection(True)
         c = conn.cursor()
 
-        # 1. Fetch latest signals produced by engine
-        c.execute("SELECT rowid, * FROM signals ORDER BY rowid DESC LIMIT 40")
+        # 1. Fetch latest signals produced by engine (500: radar web harus
+        # menampilkan SEMUA token yang masuk engine, bukan hanya 40 teratas)
+        c.execute("SELECT rowid, * FROM signals ORDER BY rowid DESC LIMIT 500")
         signals = [dict(r) for r in c.fetchall()]
 
         # 2. Fetch active paper positions
@@ -324,9 +326,9 @@ def compute_engine_health():
 
 async def api_signals(request):
     try:
-        limit = min(max(int(request.query.get("limit", "40")), 1), 1000)
+        limit = min(max(int(request.query.get("limit", "500")), 1), 1000)
     except Exception:
-        limit = 40
+        limit = 500
     cached = in_memory_state["signals"]
     if limit <= len(cached):
         data = cached[:limit]
@@ -1259,6 +1261,62 @@ async def api_token_meta(request):
     socials = {ca: TOKEN_LOGO_CACHE[ca].get("socials") or {} for ca in cas if ca in TOKEN_LOGO_CACHE}
     return web.json_response({"success": True, "logos": logos, "socials": socials})
 
+# --- PROXY IKON TOKEN (same-origin) ---
+# CDN logo pihak ketiga (mis. edit-image-proxy.j7tracker.io — domain "tracker")
+# sering diblok ekstensi adblock browser / anti-hotlink, sehingga ikon token
+# gagal tampil. Browser memuat gambar via /api/img?u=... (same-origin) yang
+# selalu berhasil; host upstream dibatasi allowlist ketat (anti-SSRF).
+
+IMG_UPSTREAM_HOSTS = (
+    "j7tracker.io", "axiom-cdn.io", "arweave.net", "arweave.dev", "pump.fun",
+    "ipfs.io", "cf-ipfs.com", "cloudflare-ipfs.com", "dexscreener.com",
+    "gmgn.ai", "nostrassets.com", "coinmarketcap.com", "assets.coingecko.com",
+    "coingecko.com", "cdn.jsdelivr.net", "solana.fm", "wsrv.nl",
+)
+IMG_CACHE = {}          # url -> {"data": bytes, "ct": str, "ts": float}
+IMG_CACHE_TTL = 6 * 3600
+IMG_CACHE_MAX = 400
+
+def _img_host_allowed(host: str) -> bool:
+    host = (host or "").lower().split(":")[0]
+    return any(host == d or host.endswith("." + d) for d in IMG_UPSTREAM_HOSTS)
+
+async def api_img(request):
+    raw = (request.query.get("u") or "").strip()
+    if not raw or len(raw) > 600:
+        return web.Response(status=400)
+    try:
+        p = urlparse(raw)
+        if p.scheme != "https" or not _img_host_allowed(p.hostname or ""):
+            return web.Response(status=403)
+    except Exception:
+        return web.Response(status=400)
+
+    now = time.time()
+    ent = IMG_CACHE.get(raw)
+    if ent and now - ent["ts"] < IMG_CACHE_TTL:
+        return web.Response(body=ent["data"], content_type=ent["ct"],
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+    session = request.app["http_session"]
+    try:
+        async with session.get(raw, timeout=ClientTimeout(total=10)) as resp:
+            ct = (resp.headers.get("Content-Type") or "").split(";")[0].strip() or "image/png"
+            if resp.status != 200 or not ct.startswith("image/"):
+                return web.Response(status=404)
+            data = await resp.read()
+            if len(data) > 1_000_000:
+                return web.Response(status=413)
+    except Exception:
+        return web.Response(status=502)
+
+    if len(IMG_CACHE) >= IMG_CACHE_MAX:
+        for k in sorted(IMG_CACHE, key=lambda k: IMG_CACHE[k]["ts"])[:64]:
+            IMG_CACHE.pop(k, None)
+    IMG_CACHE[raw] = {"data": data, "ct": ct, "ts": now}
+    return web.Response(body=data, content_type=ct,
+                        headers={"Cache-Control": "public, max-age=3600"})
+
 # --- WEBSOCKET ENGINE EVENT BUS (ZERO EXTERNAL API DELAY) ---
 
 async def websocket_handler(request):
@@ -1420,6 +1478,7 @@ def create_app():
     app.router.add_get('/api/check_ca', api_check_ca)
     app.router.add_get('/api/network', api_network)
     app.router.add_get('/api/token_meta', api_token_meta)
+    app.router.add_get('/api/img', api_img)
     app.router.add_get('/api/logs', api_logs)
     app.router.add_get('/api/wallet', api_get_wallet)
     # Export private key = operasi sensitif: wajib POST (dulu GET yang bisa

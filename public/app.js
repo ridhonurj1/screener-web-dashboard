@@ -189,13 +189,22 @@ function avatarTone(ca) {
   return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
 }
 
+function logoSrc(url) {
+  // Proxy same-origin: CDN logo pihak ketiga (domain "tracker" dsb.) sering
+  // diblok adblock browser / anti-hotlink — via bridge selalu termuat.
+  return `/api/img?u=${encodeURIComponent(url)}`;
+}
+
 function avatarHTML(ca, symbol, style = '') {
   const logo = TOKEN_LOGOS.get(ca);
+  const tone = avatarTone(ca);
   const initial = esc((symbol || '?').slice(0, 3).toUpperCase());
-  if (logo) {
-    return `<div class="token-avatar" data-ca="${esc(ca)}" style="${style}"><img src="${esc(logo)}" alt="" loading="lazy" onerror="this.parentElement.classList.add('${avatarTone(ca)}');this.remove()"></div>`;
-  }
-  return `<div class="token-avatar ${avatarTone(ca)}" data-ca="${esc(ca)}" style="${style}">${initial}</div>`;
+  // Inisial TIDAK dibuang sampai gambar benar-benar selesai dimuat
+  // (replaceChildren); bila gagal (onerror), inisial tetap tampil.
+  const img = logo
+    ? `<img src="${esc(logoSrc(logo))}" alt="" loading="lazy" decoding="async" style="opacity:0" onload="this.parentElement.classList.remove('${tone}');this.parentElement.replaceChildren(this);this.style.opacity='1'" onerror="this.parentElement.classList.add('${tone}');this.remove()">`
+    : '';
+  return `<div class="token-avatar ${logo ? '' : tone}" data-ca="${esc(ca)}" style="${style}">${initial}${img}</div>`;
 }
 
 /* ---------------- Token logos (Jupiter, batched via bridge) ---------------- */
@@ -207,8 +216,14 @@ function queueLogoFetch() {
 }
 
 async function fetchLogos() {
-  const cas = [...state.cardRefs.keys()]
-    .filter(ca => !LOGOS_FETCHED.has(ca));
+  // Kumpulkan CA dari kartu radar DAN kartu posisi (posisi bisa memuat token
+  // yang tak lagi tampil di radar — ikonnya pun harus di-fetch).
+  const seen = new Set(state.cardRefs.keys());
+  for (const { root } of posRefs.values()) {
+    const h = root.querySelector('.token-avatar[data-ca]');
+    if (h?.dataset.ca) seen.add(h.dataset.ca);
+  }
+  const cas = [...seen].filter(ca => !LOGOS_FETCHED.has(ca));
   if (cas.length === 0) return;
   cas.forEach(ca => LOGOS_FETCHED.add(ca));
 
@@ -234,21 +249,30 @@ async function fetchLogos() {
   applySocials();
 }
 
-function applyLogos() {
-  for (const { root } of state.cardRefs.values()) {
-    const holder = root.querySelector('.token-avatar[data-ca]');
-    if (!holder || holder.querySelector('img')) continue;
-    const logo = TOKEN_LOGOS.get(holder.dataset.ca);
-    if (!logo) continue;
+function applyLogoToRoot(root) {
+  const holder = root.querySelector('.token-avatar[data-ca]');
+  if (!holder || holder.querySelector('img')) return;
+  const logo = TOKEN_LOGOS.get(holder.dataset.ca);
+  if (!logo) return;
+  const tone = avatarTone(holder.dataset.ca);
+  const img = document.createElement('img');
+  img.src = logoSrc(logo);
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.style.opacity = '0';
+  img.onload = () => {
     holder.classList.remove(...AVATAR_TONES);
-    holder.textContent = '';   // drop the ticker initials so they don't cover the logo
-    const img = document.createElement('img');
-    img.src = logo;
-    img.alt = '';
-    img.loading = 'lazy';
-    img.onerror = () => { img.remove(); holder.classList.add(avatarTone(holder.dataset.ca)); };
-    holder.appendChild(img);
-  }
+    holder.replaceChildren(img);   // buang inisial hanya saat logo sudah tampil
+    img.style.opacity = '1';
+  };
+  img.onerror = () => { img.remove(); holder.classList.add(tone); };  // inisial tetap
+  holder.appendChild(img);
+}
+
+function applyLogos() {
+  for (const { root } of state.cardRefs.values()) applyLogoToRoot(root);
+  for (const { root } of posRefs.values()) applyLogoToRoot(root);  // kartu Posisi juga
 }
 
 function socialsHTML(ca) {
@@ -611,6 +635,9 @@ function pnlOf(pos) {
 
 function renderActivePositions() {
   const el = document.getElementById('sideTabContentOpen');
+  // Skeleton awal (index.html) harus hilang begitu render pertama jalan —
+  // dulu dibiarkan menempel di bawah kartu posisi nyata selamanya.
+  el.querySelectorAll(':scope > .skeleton').forEach(x => x.remove());
   const list = state.activePositions;
   document.getElementById('posBadge').textContent = list.length;
 

@@ -677,11 +677,21 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 }
 
 /* Token logo avatar */
+.token-avatar {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Logo menumpuk di atas inisial (absolute) supaya inisial tetap terlihat
+   selama gambar dimuat — dan tetap jadi fallback bila gambar gagal. */
 .token-avatar img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+  transition: opacity 0.25s ease;
 }
 
 /* ==========================================================================
