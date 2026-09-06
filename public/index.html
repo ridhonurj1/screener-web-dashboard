@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-  <link rel="stylesheet" href="/app.css?v=20260906f">
+  <link rel="stylesheet" href="/app.css?v=20260906g">
 </head>
 <body>
   <div id="app">
@@ -714,14 +714,12 @@
 
           <div class="settings-grid" style="margin-top:10px">
             <div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-                <label class="field-label" for="settingSlippage" style="margin:0">Slippage (%)</label>
-                <button type="button" class="btn" id="btnSlippageAuto" onclick="toggleAutoSlippage()" style="padding:2px 8px;font-size:10px;font-weight:800;border-radius:var(--r-full);background:var(--lime-dim);color:var(--lime);border-color:var(--lime-border);transition:all var(--t-fast)">
+              <label class="field-label" for="settingSlippage" style="margin-bottom:5px">Slippage (%)</label>
+              <div class="slippage-bar-wrap" id="slippageBarWrap">
+                <button type="button" class="btn-inline-auto" id="btnSlippageAuto" onclick="toggleAutoSlippage()">
                   AUTO
                 </button>
-              </div>
-              <div class="stepper-input-wrap">
-                <input type="number" step="1" min="1" max="100" id="settingSlippage" class="input" value="15">
+                <input type="number" step="1" min="1" max="100" id="settingSlippage" class="slippage-input-field" value="15" aria-label="Slippage percentage">
                 <div class="stepper-btns">
                   <button type="button" class="stepper-btn" id="stepSlippageUp" onclick="stepInput('settingSlippage', 1)">▲</button>
                   <button type="button" class="stepper-btn" id="stepSlippageDown" onclick="stepInput('settingSlippage', -1)">▼</button>
@@ -729,8 +727,8 @@
               </div>
             </div>
             <div>
-              <label class="field-label" for="settingWalletType">Target Eksekusi Engine</label>
-              <select id="settingWalletType" class="input" style="height:36px;background:var(--bg-2)">
+              <label class="field-label" for="settingWalletType" style="margin-bottom:5px">Target Eksekusi Engine</label>
+              <select id="settingWalletType" class="input" style="height:38px;background:var(--bg-2)">
                 <option value="demo">Demo / Sandbox Bot (Aman)</option>
                 <option value="real">Real Wallet On-Chain (Uang Asli)</option>
               </select>
@@ -883,6 +881,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906v"></script>
+  <script src="/app.js?v=20260906w"></script>
 </body>
 </html>

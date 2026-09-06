@@ -1894,50 +1894,35 @@ let slippageIsAuto = false;
 function toggleAutoSlippage(forcedState) {
   slippageIsAuto = typeof forcedState === 'boolean' ? forcedState : !slippageIsAuto;
   const btn = document.getElementById('btnSlippageAuto');
+  const bar = document.getElementById('slippageBarWrap');
   const input = document.getElementById('settingSlippage');
   const btnUp = document.getElementById('stepSlippageUp');
   const btnDown = document.getElementById('stepSlippageDown');
 
   if (slippageIsAuto) {
-    if (btn) {
-      btn.textContent = 'AUTO ON';
-      btn.style.background = 'var(--lime)';
-      btn.style.color = '#000';
-      btn.style.borderColor = 'var(--lime)';
-    }
+    if (btn) btn.classList.add('is-active');
+    if (bar) bar.classList.add('is-auto');
     if (input) {
       input.type = 'text';
-      input.value = 'Auto (Dinamis)';
+      input.value = 'Auto';
       input.disabled = true;
-      input.style.color = 'var(--lime)';
-      input.style.fontWeight = '700';
-      input.style.background = 'rgba(199, 242, 132, 0.06)';
-      input.style.borderColor = 'rgba(199, 242, 132, 0.3)';
     }
     if (btnUp) {
       btnUp.disabled = true;
-      btnUp.style.opacity = '0.25';
+      btnUp.style.opacity = '0.2';
       btnUp.style.cursor = 'not-allowed';
     }
     if (btnDown) {
       btnDown.disabled = true;
-      btnDown.style.opacity = '0.25';
+      btnDown.style.opacity = '0.2';
       btnDown.style.cursor = 'not-allowed';
     }
   } else {
-    if (btn) {
-      btn.textContent = 'AUTO';
-      btn.style.background = 'transparent';
-      btn.style.color = 'var(--text-3)';
-      btn.style.borderColor = 'var(--border-2)';
-    }
+    if (btn) btn.classList.remove('is-active');
+    if (bar) bar.classList.remove('is-auto');
     if (input) {
       input.disabled = false;
       input.type = 'number';
-      input.style.color = 'var(--text-1)';
-      input.style.fontWeight = 'normal';
-      input.style.background = 'var(--bg-0)';
-      input.style.borderColor = 'var(--border-2)';
       if (input.value.includes('Auto') || !input.value) input.value = '15';
     }
     if (btnUp) {

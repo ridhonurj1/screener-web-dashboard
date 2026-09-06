@@ -2137,19 +2137,23 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 .stepper-input-wrap .input {
-  padding-right: 32px;
+  height: 38px;
+  padding: 8px 30px 8px 10px;
+  font-size: 13px;
+  box-sizing: border-box;
 }
 .stepper-btns {
   position: absolute;
-  right: 4px;
-  top: 4px;
-  bottom: 4px;
-  width: 24px;
+  right: 3px;
+  top: 3px;
+  bottom: 3px;
+  width: 22px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   z-index: 2;
 }
 .stepper-btn {
@@ -2159,6 +2163,8 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   color: var(--text-3);
   border-radius: 3px;
   padding: 0;
+  font-size: 8px;
+  line-height: 1;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -2173,7 +2179,69 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   background: var(--lime-dim);
 }
 .stepper-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Inline Auto Button inside Slippage Bar */
+.slippage-bar-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-0);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
+  height: 38px;
+  padding: 2px 3px;
+  box-sizing: border-box;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.slippage-bar-wrap:focus-within {
+  border-color: var(--lime-border);
+  box-shadow: 0 0 0 3px rgba(199, 242, 132, 0.09);
+}
+.slippage-bar-wrap .btn-inline-auto {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-2);
+  background: var(--bg-2);
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.slippage-bar-wrap .btn-inline-auto.is-active {
+  background: var(--lime);
+  color: #000;
+  border-color: var(--lime);
+  box-shadow: 0 0 8px rgba(199, 242, 132, 0.35);
+}
+.slippage-bar-wrap .slippage-input-field {
+  flex: 1;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 26px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-1);
+  outline: none;
+  width: 100%;
+}
+.slippage-bar-wrap.is-auto {
+  background: rgba(199, 242, 132, 0.04);
+  border-color: rgba(199, 242, 132, 0.35);
+}
+.slippage-bar-wrap.is-auto .slippage-input-field {
+  color: var(--lime);
+  font-weight: 700;
   cursor: not-allowed;
 }
 
