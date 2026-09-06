@@ -7,7 +7,8 @@ Real-time Web Dashboard untuk **ScreenerNantiAja** (Solana Quant Screener & Auto
 ## 🚀 Fitur
 
 ### Market Radar & Data Live
-- **Alpha Screener Radar** — sinyal token live via WebSocket (tick 200ms), dengan logo token (Jupiter Tokens API), tier/strategy chip, Alpha Score meter, dan sparkline harga real-time.
+- **Alpha Screener Radar** — sinyal token live via WebSocket (tick 200ms), ditenagai **DexScreener 4-Proxy WARP Pool (0.5s cadence)** dengan logo token (Jupiter Tokens API), tier/strategy chip, Alpha Score meter, dan sparkline harga real-time.
+- **Posisi OPEN Ultra-Kilat** — pemantauan posisi aktif dengan **GMGN Interleaved 50ms Pipelined Stream** (14 IP Cloudflare WireGuard) untuk mengunci puncak ATH dan trailing stop seketika tanpa delay.
 - **KPI Strip** — saldo sandbox, realized PnL (% modal), win rate meter, dan aktivitas engine.
 - **Filter & Sort** — sinyal Aktif/Semua/Tertutup, urut terbaru/multiplikasi/skor.
 - **Status Bar** — harga SOL live (DexScreener), gas (base + priority fee), kecepatan engine (sync ms, tick age), klien WebSocket & uptime.
