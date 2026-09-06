@@ -2680,8 +2680,8 @@ const HP_INFRA = [
   { key: 'jito',  name: 'Jito MEV Block Engine',    latKey: 'jito_latency_ms',        sub: () => 'Private Mempool', standby: true },
   { key: 'dex1',  name: 'DexScreener #1 (Direct)',  latKey: 'dex1_latency_ms',        fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'Direct Local IP · 100ms Pool' },
   { key: 'dex2',  name: 'DexScreener #2 (WARP)',    latKey: 'dex2_latency_ms',        fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'CF WARP :40000 · 100ms Pool' },
-  { key: 'dex3',  name: 'DexScreener #3 (Tunnel 1)', latKey: 'dex3_latency_ms',       fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9051 · 100ms Pool' },
-  { key: 'dex4',  name: 'DexScreener #4 (Tunnel 2)', latKey: 'dex4_latency_ms',       fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9052 · 100ms Pool' },
+  { key: 'dex3',  name: 'DexScreener #3 (Dedicated 1)', latKey: 'dex3_latency_ms',    fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9064 · 100ms Pool' },
+  { key: 'dex4',  name: 'DexScreener #4 (Dedicated 2)', latKey: 'dex4_latency_ms',    fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9065 · 100ms Pool' },
   { key: 'rug',   name: 'RugCheck Security',        latKey: 'rugcheck_latency_ms',    sub: () => 'Mint/Freeze Defense' },
 ];
 
