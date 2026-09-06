@@ -648,6 +648,12 @@ function pnlOf(pos) {
   return 0;
 }
 
+// Harga mikro di kartu posisi: buang nol ekor (min. 4 desimal) supaya muat
+// di sel grid 5 kolom tanpa terpotong ellipsis.
+function fmtPosPrice(p) {
+  return ('$' + fmtPrice(p)).replace(/(\.\d{4,}?)0+$/, '$1');
+}
+
 function renderActivePositions() {
   const el = document.getElementById('sideTabContentOpen');
   // Skeleton awal (index.html) harus hilang begitu render pertama jalan —
@@ -708,7 +714,8 @@ function buildPositionCard(pos) {
       <div class="pos-pnl" data-ref="pnl">—</div>
     </div>
     <div class="pos-grid">
-      <div class="cell"><div class="k">Live</div><div class="v" data-ref="price">—</div></div>
+      <div class="cell"><div class="k">Live</div><div class="v" data-ref="price">${fmtPosPrice(pos.current_price_usd)}</div></div>
+      <div class="cell"><div class="k">Entry</div><div class="v" data-ref="entry">${fmtPosPrice(pos.entry_price_usd)}</div></div>
       <div class="cell"><div class="k">MCap</div><div class="v" data-ref="mcap">—</div></div>
       <div class="cell"><div class="k">Peak</div><div class="v" style="color:var(--cyan)" data-ref="peak">—</div></div>
       <div class="cell"><div class="k">Score</div><div class="v" style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</div></div>
@@ -779,7 +786,7 @@ function updatePositionCard(pos) {
     : '<svg class="pos-arrow-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L2 4h20L12 20z"/></svg>';
   entry.refs.pnl.innerHTML = `${arrowSvg}<span>${win ? '+' : ''}${pnl.toFixed(2)}%</span>`;
   entry.refs.pnl.style.color = win ? 'var(--green)' : 'var(--red)';
-  entry.refs.price.textContent = '$' + fmtPrice(pos.current_price_usd);
+  entry.refs.price.textContent = fmtPosPrice(pos.current_price_usd);
   entry.refs.mcap.textContent = fmtUSD(pos.current_mcap);
   entry.refs.peak.textContent = peak.toFixed(2) + 'x';
   entry.refs.age.textContent = relTime(parseTs(pos.created_at));
