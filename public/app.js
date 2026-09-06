@@ -1352,11 +1352,12 @@ function mountEquityChart(host, points) {
       <path class="eq-area" d="${area}" fill="url(#pfGrad)"/>
       <path class="eq-glow" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
       <path class="eq-line" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
+      <line class="eq-cross-svg" x1="0" x2="0" y1="0" y2="1000" stroke="rgba(199,242,132,0.35)" stroke-width="1" style="display:none" vector-effect="non-scaling-stroke"/>
+      <circle class="eq-dot-svg" r="9" fill="${color}" stroke="#0b1220" stroke-width="3" style="display:none"/>
     </svg>
     <div class="eq-plot">
-      <div class="eq-cross" hidden></div>
-      <div class="eq-dotc" hidden></div>
       <div class="eq-last" style="left:${xPct(n - 1)}%;top:${yPct(vs[n - 1])}%"></div>
+      <div class="eq-tip" hidden></div>
     </div>
     <div class="eq-yaxis">
       ${ticks.map(v => `<span style="top:${yPct(v)}%">${v >= 0 ? '+' : ''}${v.toFixed(dec)}</span>`).join('')}
@@ -1366,8 +1367,8 @@ function mountEquityChart(host, points) {
 
   // hover crosshair + tooltip
   const svg = host.querySelector('.eq-svg');
-  const cross = host.querySelector('.eq-cross');
-  const dot = host.querySelector('.eq-dotc');
+  const cross = host.querySelector('.eq-cross-svg');
+  const dot = host.querySelector('.eq-dot-svg');
   const tip = host.querySelector('.eq-tip');
 
   const move = e => {
@@ -1383,16 +1384,18 @@ function mountEquityChart(host, points) {
     const p = points[i];
     const prev = points[Math.max(0, i - 1)];
     const d = p.v - prev.v;
-    // Kunci crosshair + titik ke VERTEX kurva (bukan X mouse dengan Y vertex):
-    // dulu X mengikuti mouse sementara Y menempel nilai vertex terdekat ->
-    // titik melayang di atas/bawah kurva setiap kali segmen miring.
-    const vx = xPct(i);
-    cross.hidden = false; dot.hidden = false; tip.hidden = false;
-    cross.style.left = vx + '%';
-    dot.style.left = vx + '%';
-    dot.style.top = yPct(p.v) + '%';
-    const px2 = Math.min(rect.width, Math.max(0, (vx / 100) * rect.width));
-    tip.style.left = Math.min(rect.width - 74, Math.max(74, px2)) + 'px';
+    // Crosshair + titik digambar DI DALAM SVG (viewBox 1000x1000) — satu
+    // ruang koordinat dengan kurva, sehingga titik tidak mungkin melayang
+    // di luar garis bagaimana pun bentuk stretch/zoom layarnya.
+    const vxPx = px(i), vyPx = py(p.v);
+    cross.setAttribute('x1', vxPx.toFixed(1));
+    cross.setAttribute('x2', vxPx.toFixed(1));
+    cross.style.display = '';
+    dot.setAttribute('cx', vxPx.toFixed(1));
+    dot.setAttribute('cy', vyPx.toFixed(1));
+    dot.style.display = '';
+    tip.hidden = false;
+    tip.style.left = `clamp(74px, ${xPct(i)}%, calc(100% - 74px))`;
     tip.style.top = `calc(${yPct(p.v)}% - 12px)`;
     const pnlTxt = `${p.v >= 0 ? '+' : ''}${p.v.toFixed(4)} SOL`;
     tip.innerHTML = p.sym
@@ -1401,7 +1404,7 @@ function mountEquityChart(host, points) {
       : `<b style="color:${color}">${pnlTxt}</b>
          <span>${fmtAxisTime(p.t)} · titik awal</span>`;
   };
-  const leave = () => { cross.hidden = true; dot.hidden = true; tip.hidden = true; };
+  const leave = () => { cross.style.display = 'none'; dot.style.display = 'none'; tip.hidden = true; };
   svg.addEventListener('mousemove', move);
   svg.addEventListener('mouseleave', leave);
 }
