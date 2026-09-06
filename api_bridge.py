@@ -557,6 +557,12 @@ async def api_ping(request):
             lines.append(f"  ├─ Slot {int(cl.get('slot', 0) or 0):2d} ({str(cl.get('name', '')):10s}): {st_lbl}")
         slot_lines = "\n".join(lines) if lines else "  └─ (menunggu engine push state pertama ±2 detik setelah start)"
 
+        dex_lats = snap.get("dex_latencies") or {}
+        dex1_lat = float(dex_lats.get("dex1", 0) or 0)
+        dex2_lat = float(dex_lats.get("dex2", 0) or 0)
+        dex3_lat = float(dex_lats.get("dex3", 0) or 0)
+        dex4_lat = float(dex_lats.get("dex4", 0) or 0)
+
         text = (
             "🏓 [SYSTEM API LATENCY & HEALTH AUDIT — ZERO-API CACHE] ⚡\n\n"
             f"⏱️ Waktu Snapshot DB: {_now_utc}\n"
@@ -565,10 +571,10 @@ async def api_ping(request):
             f"├─ 🟢 QuickNode RPC Dedicated: {r_lat:.1f} ms (Slot: {r_slot})\n"
             f"├─ 🟢 Jupiter Ultra Swap API: {jup_lat:.1f} ms (Warm Keep-Alive Pool)\n"
             f"├─ 🟢 Jito MEV Block Engine: {jito_lat:.1f} ms (Private Mempool Active)\n"
-            f"├─ 🟢 DexScreener #1 (Direct IP): {dex_lat:.1f} ms (100ms Pool)\n"
-            f"├─ 🟢 DexScreener #2 (CF WARP :40000): {dex_lat:.1f} ms (100ms Pool)\n"
-            f"├─ 🟢 DexScreener #3 (WARP Tunnel 1 :9051): {dex_lat:.1f} ms (100ms Pool)\n"
-            f"├─ 🟢 DexScreener #4 (WARP Tunnel 2 :9052): {dex_lat:.1f} ms (100ms Pool)\n"
+            f"├─ 🟢 DexScreener #1 (Direct IP): {dex1_lat:.1f} ms (100ms Pool)\n"
+            f"├─ 🟢 DexScreener #2 (CF WARP :40000): {dex2_lat:.1f} ms (100ms Pool)\n"
+            f"├─ 🟢 DexScreener #3 (WARP Tunnel 1 :9051): {dex3_lat:.1f} ms (100ms Pool)\n"
+            f"├─ 🟢 DexScreener #4 (WARP Tunnel 2 :9052): {dex4_lat:.1f} ms (100ms Pool)\n"
             f"└─ 🟢 RugCheck Security: {rc_lat:.1f} ms (Mint/Freeze Defense)\n\n"
             "📉 KUOTA & RATE-LIMIT GMGN (sejak service start):\n"
             f"├─ Request keluar: {_req:,} | 200 OK: {_ok:,}\n"
@@ -605,6 +611,10 @@ async def api_ping(request):
                 "rpc_latency_ms": r_lat,
                 "jupiter_latency_ms": jup_lat,
                 "dexscreener_latency_ms": dex_lat,
+                "dex1_latency_ms": dex1_lat,
+                "dex2_latency_ms": dex2_lat,
+                "dex3_latency_ms": dex3_lat,
+                "dex4_latency_ms": dex4_lat,
                 "rugcheck_latency_ms": rc_lat,
                 "jito_latency_ms": jito_lat,
                 "active_positions": int(tel["active_positions"] or 0),

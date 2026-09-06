@@ -2676,10 +2676,10 @@ const HP_INFRA = [
   { key: 'qn',    name: 'QuickNode RPC Dedicated',  latKey: 'rpc_latency_ms',         sub: () => `Slot: ${window.__hpTel?.rpc_slot ?? '—'}` },
   { key: 'jup',   name: 'Jupiter Ultra Swap API',   latKey: 'jupiter_latency_ms',     sub: () => 'Warm Keep-Alive Pool' },
   { key: 'jito',  name: 'Jito MEV Block Engine',    latKey: 'jito_latency_ms',        sub: () => 'Private Mempool', standby: true },
-  { key: 'dex1',  name: 'DexScreener #1 (Direct)',  latKey: 'dexscreener_latency_ms', sub: () => 'Direct Local IP · 100ms Pool' },
-  { key: 'dex2',  name: 'DexScreener #2 (WARP)',    latKey: 'dexscreener_latency_ms', sub: () => 'CF WARP :40000 · 100ms Pool' },
-  { key: 'dex3',  name: 'DexScreener #3 (Tunnel 1)', latKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9051 · 100ms Pool' },
-  { key: 'dex4',  name: 'DexScreener #4 (Tunnel 2)', latKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9052 · 100ms Pool' },
+  { key: 'dex1',  name: 'DexScreener #1 (Direct)',  latKey: 'dex1_latency_ms',        fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'Direct Local IP · 100ms Pool' },
+  { key: 'dex2',  name: 'DexScreener #2 (WARP)',    latKey: 'dex2_latency_ms',        fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'CF WARP :40000 · 100ms Pool' },
+  { key: 'dex3',  name: 'DexScreener #3 (Tunnel 1)', latKey: 'dex3_latency_ms',       fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9051 · 100ms Pool' },
+  { key: 'dex4',  name: 'DexScreener #4 (Tunnel 2)', latKey: 'dex4_latency_ms',       fallbackLatKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9052 · 100ms Pool' },
   { key: 'rug',   name: 'RugCheck Security',        latKey: 'rugcheck_latency_ms',    sub: () => 'Mint/Freeze Defense' },
 ];
 
@@ -2747,7 +2747,10 @@ async function loadPing() {
     const infra = document.getElementById('hpInfra');
     if (infra) {
       infra.innerHTML = HP_INFRA.map(api => {
-        const lat = parseFloat(tel[api.latKey] || 0);
+        let lat = parseFloat(tel[api.latKey] || 0);
+        if ((!lat || lat <= 0) && api.fallbackLatKey) {
+          lat = parseFloat(tel[api.fallbackLatKey] || 0);
+        }
         let dotCls = 'dot-ok', dotLbl = 'AKTIF';
         if (api.standby) { dotCls = 'dot-idle'; dotLbl = 'STANDBY'; }
         else if (tel.timestamp && age !== null && age > 900) { dotCls = 'dot-err'; dotLbl = 'DATA BASI'; }
