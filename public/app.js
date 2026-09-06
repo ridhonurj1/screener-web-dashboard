@@ -1617,14 +1617,17 @@ function openChartModal(ca, symbol, name, priceStr) {
 let chartFull = false;
 function toggleChartFull() {
   chartFull = !chartFull;
-  chartModal.classList.toggle('full', chartFull);
+  // 'full' dipasang pada elemen .chart-modal DI DALAM backdrop (target CSS .chart-modal.full)
+  const inner = chartModal.querySelector('.chart-modal');
+  if (inner) inner.classList.toggle('full', chartFull);
   const btn = document.getElementById('chartFullBtn');
   if (btn) btn.title = chartFull ? 'Kembalikan ukuran' : 'Layar penuh';
 }
 
 function closeChartModal() {
   chartFull = false;
-  chartModal.classList.remove('full');
+  const inner = chartModal.querySelector('.chart-modal');
+  if (inner) inner.classList.remove('full');
   chartModal.classList.remove('open');
   setTimeout(() => {
     chartModal.classList.add('hidden');
