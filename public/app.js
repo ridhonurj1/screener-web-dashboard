@@ -2673,11 +2673,14 @@ if (_rsSize) _rsSize.addEventListener('change', e => {
 
 /* ---------------- Health Ping page ---------------- */
 const HP_INFRA = [
-  { key: 'qn',   name: 'QuickNode RPC Dedicated', latKey: 'rpc_latency_ms',        sub: () => `Slot: ${window.__hpTel?.rpc_slot ?? '—'}` },
-  { key: 'jup',  name: 'Jupiter Ultra Swap API',  latKey: 'jupiter_latency_ms',    sub: () => 'Warm Keep-Alive Pool' },
-  { key: 'jito', name: 'Jito MEV Block Engine',   latKey: 'jito_latency_ms',       sub: () => 'Private Mempool', standby: true },
-  { key: 'dex',  name: 'DexScreener API',         latKey: 'dexscreener_latency_ms', sub: () => window.__hpDexOk === false ? 'Chunk fetch gagal' : 'Verified DEX Pairs' },
-  { key: 'rug',  name: 'RugCheck Security',       latKey: 'rugcheck_latency_ms',   sub: () => 'Mint/Freeze Defense' },
+  { key: 'qn',    name: 'QuickNode RPC Dedicated',  latKey: 'rpc_latency_ms',         sub: () => `Slot: ${window.__hpTel?.rpc_slot ?? '—'}` },
+  { key: 'jup',   name: 'Jupiter Ultra Swap API',   latKey: 'jupiter_latency_ms',     sub: () => 'Warm Keep-Alive Pool' },
+  { key: 'jito',  name: 'Jito MEV Block Engine',    latKey: 'jito_latency_ms',        sub: () => 'Private Mempool', standby: true },
+  { key: 'dex1',  name: 'DexScreener #1 (Direct)',  latKey: 'dexscreener_latency_ms', sub: () => 'Direct Local IP · 0.5s Pool' },
+  { key: 'dex2',  name: 'DexScreener #2 (WARP)',    latKey: 'dexscreener_latency_ms', sub: () => 'CF WARP :40000 · 0.5s Pool' },
+  { key: 'dex3',  name: 'DexScreener #3 (Tunnel 1)', latKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9051 · 0.5s Pool' },
+  { key: 'dex4',  name: 'DexScreener #4 (Tunnel 2)', latKey: 'dexscreener_latency_ms', sub: () => 'WireGuard :9052 · 0.5s Pool' },
+  { key: 'rug',   name: 'RugCheck Security',        latKey: 'rugcheck_latency_ms',    sub: () => 'Mint/Freeze Defense' },
 ];
 
 function hpDot(cls, label) {
