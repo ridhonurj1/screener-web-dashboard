@@ -77,11 +77,13 @@ async def auth_middleware(request, handler):
     path = request.path
     if not (path.startswith("/api/") or path.startswith("/ws/")) or not AUTH_TOKEN:
         return await handler(request)
-    # Jaringan privat (Tailscale 100.64/10, RFC1918, loopback) = akses penuh
-    # TANPA token — pengalaman pakai kembali seperti semula. Token hanya
-    # diwajibkan untuk koneksi dari internet publik (port 8000 terpapar di
-    # 0.0.0.0; itulah permukaan yang harus terlindungi).
-    if _is_private_peer(request):
+    # ENDPOINT SENSITIF (trade nyata & kunci wallet): WAJIB token SELALU,
+    # termasuk dari jaringan privat — perangkat tailnet mana pun tidak boleh
+    # bisa menembak live trade / export key tanpa secret.
+    _sensitive = path.startswith("/api/trade") or path.startswith("/api/wallet")
+    if not _sensitive and _is_private_peer(request):
+        # Endpoint read-only di jaringan privat (Tailscale 100.64/10, RFC1918,
+        # loopback): akses tanpa token — UX pemakaian sendiri tetap mulus.
         return await handler(request)
     header = request.headers.get("Authorization", "")
     qtoken = request.query.get("auth", "")
