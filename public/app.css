@@ -2435,3 +2435,16 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Chart modal mode layar penuh (tombol Full di samping Close) */
+.chart-modal.full {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+}
+.chart-modal.full .chart-modal-body { background: #05080d; }

@@ -1614,7 +1614,17 @@ function openChartModal(ca, symbol, name, priceStr) {
   requestAnimationFrame(() => chartModal.classList.add('open'));
 }
 
+let chartFull = false;
+function toggleChartFull() {
+  chartFull = !chartFull;
+  chartModal.classList.toggle('full', chartFull);
+  const btn = document.getElementById('chartFullBtn');
+  if (btn) btn.title = chartFull ? 'Kembalikan ukuran' : 'Layar penuh';
+}
+
 function closeChartModal() {
+  chartFull = false;
+  chartModal.classList.remove('full');
   chartModal.classList.remove('open');
   setTimeout(() => {
     chartModal.classList.add('hidden');
