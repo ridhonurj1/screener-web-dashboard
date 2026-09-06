@@ -368,7 +368,7 @@ async def api_recap(request):
 async def api_ping(request):
     """Health Ping: menyusun audit dari DATABASE YANG SAMA dengan engine —
     baris telemetri terakhir + mirror state memori (health_state) yang
-    engine push tiap 60 detik. 0 kuota API eksternal terpakai."""
+    engine push tiap siklus tracker (2 detik). 0 kuota API eksternal terpakai."""
     try:
         import datetime as _dt
         conn = get_db_connection(True)
@@ -469,6 +469,20 @@ async def api_ping(request):
         return web.json_response({
             "success": True,
             "text": text,
+            "db_read_ms": round(db_read_ms, 2),
+            "telemetry": {
+                "timestamp": str(tel["timestamp"]),
+                "rpc_slot": r_slot,
+                "rpc_latency_ms": r_lat,
+                "jupiter_latency_ms": jup_lat,
+                "dexscreener_latency_ms": dex_lat,
+                "rugcheck_latency_ms": rc_lat,
+                "jito_latency_ms": jito_lat,
+                "active_positions": int(tel["active_positions"] or 0),
+                "total_signals": int(tel["total_signals"] or 0),
+            },
+            "stats": gs,
+            "slots": cluster,
             "age_minutes": age_min,
             "updated": state_updated or str(tel["timestamp"]),
         })

@@ -2448,3 +2448,13 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   border: none;
 }
 .chart-modal.full .chart-modal-body { background: #05080d; }
+
+/* Health Ping */
+.hp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.hp-card { background: var(--bg-1); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 10px 12px; }
+.hp-card .hp-k { font-size: 9.5px; letter-spacing: 0.08em; color: var(--text-4); text-transform: uppercase; }
+.hp-card .hp-v { font-size: 18px; font-weight: 800; margin-top: 3px; }
+.hp-card .hp-s { font-size: 10px; color: var(--text-4); margin-top: 2px; }
+.hp-st-active { color: var(--green); font-weight: 700; }
+.hp-st-cool { color: #ffc24d; font-weight: 700; }
+.hp-st-idle { color: var(--text-4); }

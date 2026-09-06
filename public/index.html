@@ -332,13 +332,44 @@
     <!-- ==================== PAGE: HEALTH PING ==================== -->
   <main class="page hidden" id="pageHealthPing">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-      <h1 class="page-title">🏓 Health Ping</h1>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span id="pingMeta" style="font-size:11px;color:var(--text-3)">Memuat snapshot telemetri…</span>
-        <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
+      <div>
+        <h1 class="page-title">Health Ping</h1>
+        <div style="font-size:11px;color:var(--text-3)" id="pingMeta">Memuat mirror state dari engine…</div>
       </div>
+      <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
     </div>
-    <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px">Memuat snapshot telemetri dari engine…</div>
+
+    <section class="page-card recap-tree-card">
+      <div class="term-chrome">
+        <span class="term-dot" style="background:#ff5f57"></span>
+        <span class="term-dot" style="background:#febc2e"></span>
+        <span class="term-dot" style="background:#28c840"></span>
+        <span class="term-title mono">ponyin@engine: ~/health - zero-api mirror</span>
+      </div>
+      <div style="padding:14px 16px">
+        <div class="hp-cards">
+          <div class="hp-card"><div class="hp-k">Kecepatan Baca DB</div><div class="hp-v mono" id="hpDbRead">—</div><div class="hp-s">0 kuota API</div></div>
+          <div class="hp-card"><div class="hp-k">Request Keluar</div><div class="hp-v mono" id="hpReq">—</div><div class="hp-s">GMGN sejak start</div></div>
+          <div class="hp-card"><div class="hp-k">200 OK</div><div class="hp-v mono" id="hpOk">—</div><div class="hp-s" id="hpCacheSub">—</div></div>
+          <div class="hp-card"><div class="hp-k">HTTP 429</div><div class="hp-v mono" id="hp429">—</div><div class="hp-s" id="hp429Sub">—</div></div>
+          <div class="hp-card"><div class="hp-k">Slot Siap</div><div class="hp-v mono" id="hpReady">—</div><div class="hp-s" id="hpReadySub">dari 15 slot</div></div>
+        </div>
+
+        <table class="data-table" id="hpSlotTable" style="margin-top:14px">
+          <thead><tr><th class="num">Slot</th><th>Account / Proxy</th><th>Status</th><th class="num">Terakhir Dipakai</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="hpEmpty" class="empty-state hidden">
+          <div class="title">Menunggu mirror state pertama dari engine…</div>
+          <div class="hint">Engine menulis state tiap siklus tracker (±2 detik).</div>
+        </div>
+      </div>
+    </section>
+
+    <details style="margin-top:12px">
+      <summary class="mono" style="font-size:11px;color:var(--text-3);cursor:pointer">Format teks engine (/ping)</summary>
+      <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px;margin-top:8px">—</div>
+    </details>
   </main>
 
   <!-- ==================== PAGE: LOGS ==================== -->
@@ -691,6 +722,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906h"></script>
+  <script src="/app.js?v=20260906i"></script>
 </body>
 </html>

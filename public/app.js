@@ -2182,19 +2182,46 @@ async function loadPing() {
   try {
     const res = await fetch('/api/ping');
     const data = await res.json();
-    const box = document.getElementById('pingBox');
     const meta = document.getElementById('pingMeta');
-    if (!box) return;
-    if (data.success && data.text) {
-      if (box.textContent !== data.text) box.textContent = data.text;
-      if (meta) meta.textContent = `Snapshot: ${data.updated} · ${data.age_minutes} menit lalu · 0 kuota API`;
-    } else if (meta) {
-      meta.textContent = data.error || 'Snapshot belum tersedia';
+    const box = document.getElementById('pingBox');
+    if (!data.success) {
+      if (meta) meta.textContent = data.error || 'Snapshot belum tersedia';
+      return;
     }
+    if (meta) meta.textContent = `Mirror DB: ${data.state_updated || '—'} (usia ${data.age_seconds ?? '—'}s) · Telemetri: ${data.telemetry?.timestamp || '—'} · 0 kuota API`;
+
+    const st = data.stats || {};
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('hpDbRead', `${(data.db_read_ms ?? 0).toFixed(2)} ms`);
+    set('hpReq', (st.requests || 0).toLocaleString('id-ID'));
+    set('hpOk', (st.hits_200 || 0).toLocaleString('id-ID'));
+    const served = (st.requests || 0) + (st.cache_hits || 0);
+    set('hpCacheSub', served > 0 ? `Cache hit ${((st.cache_hits || 0) / served * 100).toFixed(1)}%` : '—');
+    set('hp429', st.hits_429 || 0);
+    set('hp429Sub', st.last_429_ts > 0 ? `terakhir ${Math.max(1, Math.round((Date.now() / 1000 - st.last_429_ts) / 60))} menit lalu` : 'belum pernah');
+
+    const slots = data.slots || [];
+    const ready = slots.filter(s => s.is_ready).length;
+    set('hpReady', `${ready}`);
+    set('hpReadySub', `dari ${slots.length || 15} slot`);
+
+    const tbody = document.querySelector('#hpSlotTable tbody');
+    if (tbody) {
+      tbody.innerHTML = slots.map(s => {
+        let cls = 'hp-st-idle', lbl = '⚪ STANDBY (Ready)';
+        if (!s.is_ready) { cls = 'hp-st-cool'; lbl = `🟡 COOLDOWN ${s.rem_sec}s`; }
+        else if (s.is_active) { cls = 'hp-st-active'; lbl = '🟢 AKTIF'; }
+        const lastTxt = s.last_used_s > 9000 ? '—' : (s.last_used_s < 3 ? 'baru saja' : `${Math.round(s.last_used_s)}s lalu`);
+        return `<tr><td class="num">${s.slot}</td><td class="mono" style="font-size:10.5px">${esc(s.proxy_label || s.name || '')}</td><td class="${cls}">${lbl}</td><td class="num">${lastTxt}</td></tr>`;
+      }).join('');
+    }
+    if (box && box.textContent !== data.text) box.textContent = data.text;
   } catch (e) { /* non-critical */ }
 }
 document.getElementById('pingRefresh')?.addEventListener('click', loadPing);
-setInterval(() => { if (currentPage === 'healthping') loadPing(); }, 60000);
+// Health Ping nyaris realtime: mirror DB diperbarui tiap siklus tracker (2s),
+// halaman ikut poll tiap 2 detik selama halamannya terbuka.
+setInterval(() => { if (currentPage === 'healthping') loadPing(); }, 2000);
 
 /* ---------------- Boot ---------------- */
 
