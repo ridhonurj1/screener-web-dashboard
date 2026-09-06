@@ -643,8 +643,17 @@ function buildPositionCard(pos) {
       <div class="cell"><div class="k">Peak</div><div class="v" style="color:var(--cyan)" data-ref="peak">—</div></div>
       <div class="cell"><div class="k">Score</div><div class="v" style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</div></div>
     </div>
-    <div class="pos-foot">
-      <span class="chip" data-ref="tp1chip" style="display:none;font-size:9.5px;background:rgba(47,215,118,0.12);color:var(--green);border-color:rgba(47,215,118,0.35)"></span>
+    <div class="pos-foot" style="flex-wrap:wrap;gap:6px">
+      <div data-ref="tp1box" style="display:none;width:100%;font-family:var(--font-mono);font-size:10px;line-height:1.35;background:rgba(47,215,118,0.08);border:1px solid rgba(47,215,118,0.28);border-radius:var(--r-sm);padding:5px 8px;margin-bottom:2px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-3);font-weight:700">TP1 :</span>
+          <span data-ref="tp1line" style="color:var(--green);font-weight:800">+0.0000 SOL</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px">
+          <span style="color:var(--text-3);font-weight:700">Trailing :</span>
+          <span data-ref="tp2line" style="color:var(--cyan);font-weight:700">0 tkn Running</span>
+        </div>
+      </div>
       <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
       <div style="display:flex;align-items:center;gap:9px">
         <span class="sig-age" data-ref="age"></span>
@@ -669,21 +678,25 @@ function updatePositionCard(pos) {
   const win = pnl >= 0;
   const peak = parseFloat(pos.peak_multiplier) || 1;
 
-  // TP1 chip: modal aman + sisa token (moonbag) setelah TP1
-  const t1chip = entry.refs.tp1chip;
-  if (t1chip) {
+  // TP1 2-line box: modal aman + sisa token (moonbag) setelah TP1
+  const t1box = entry.refs.tp1box;
+  if (t1box) {
     const hit = parseInt(pos.tp1_hit) === 1 || pos.tp1_hit === true;
     if (hit) {
       const t1sol = parseFloat(pos.tp1_sol_realized) || 0;
       const sisa = parseFloat(pos.tokens_remaining) || 0;
-      t1chip.style.display = '';
-      t1chip.textContent = `TP1 ✓ +${t1sol.toFixed(4)} SOL · sisa ${fmtSol(sisa, 0)} token`;
+      t1box.style.display = 'block';
+      if (entry.refs.tp1line) entry.refs.tp1line.textContent = `+${t1sol.toFixed(4)} SOL`;
+      if (entry.refs.tp2line) entry.refs.tp2line.textContent = `${Math.round(sisa).toLocaleString('en-US')} tkn Running`;
     } else {
-      t1chip.style.display = 'none';
+      t1box.style.display = 'none';
     }
   }
 
-  entry.refs.pnl.innerHTML = `<span class="arrow">${win ? '▲' : '▼'}</span>${win ? '+' : ''}${pnl.toFixed(2)}%`;
+  const arrowSvg = win
+    ? '<svg class="pos-arrow-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L22 20H2L12 4Z"/></svg>'
+    : '<svg class="pos-arrow-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L2 4h20L12 20z"/></svg>';
+  entry.refs.pnl.innerHTML = `${arrowSvg}<span>${win ? '+' : ''}${pnl.toFixed(2)}%</span>`;
   entry.refs.pnl.style.color = win ? 'var(--green)' : 'var(--red)';
   entry.refs.price.textContent = '$' + fmtPrice(pos.current_price_usd);
   entry.refs.mcap.textContent = fmtUSD(pos.current_mcap);

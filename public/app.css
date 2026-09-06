@@ -1839,10 +1839,20 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   font-size: 16px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  line-height: 1;
 }
 
-.pos-pnl .arrow { font-size: 11px; margin-right: 2px; }
+.pos-pnl .pos-arrow-svg {
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+  flex-shrink: 0;
+  transform: translateY(-1px);
+}
 
 .pos-grid {
   display: grid;
