@@ -295,7 +295,7 @@
 
         <!-- [📋] Recent Signals -->
         <section class="page-card">
-          <div class="drawer-section-title"><span>[📋] Recent Signals</span><span class="sub">5 terakhir · sesuai format engine</span></div>
+          <div class="drawer-section-title"><span>[📋] Recent Signals</span><span class="sub" id="rsMeta">sesuai format engine</span></div>
           <div class="table-wrap">
             <table class="data-table" id="recentSignalsTable">
               <thead>
@@ -303,6 +303,17 @@
               </thead>
               <tbody></tbody>
             </table>
+            <div id="rsPager" style="display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:8px 6px 2px;">
+              <button class="btn" id="rsPrev" style="padding:4px 12px;font-size:11px;">‹ Sebelumnya</button>
+              <span id="rsPageInfo" style="font-size:11px;color:var(--text-3)">—</span>
+              <button class="btn" id="rsNext" style="padding:4px 12px;font-size:11px;">Berikutnya ›</button>
+              <select id="rsPageSize" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
+                <option value="10">10 / hal</option>
+                <option value="25">25 / hal</option>
+                <option value="50">50 / hal</option>
+                <option value="100">100 / hal</option>
+              </select>
+            </div>
             <div id="recentSignalsEmpty" class="empty-state hidden">
               <div class="orb"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
               <div class="title">Belum ada sinyal pada periode ini</div>
@@ -661,6 +672,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906c"></script>
+  <script src="/app.js?v=20260906d"></script>
 </body>
 </html>

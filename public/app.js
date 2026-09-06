@@ -1964,6 +1964,9 @@ function activatePage() {
 let engineTf = 'daily';
 let recapSignals = [];
 let engineSig = '';
+// Pagination Recent Signals: 10/25/50/100 baris per halaman (tersimpan di browser)
+let recapPageSize = (() => { const v = parseInt(localStorage.getItem('rsPageSize') || '10', 10); return [10, 25, 50, 100].includes(v) ? v : 10; })();
+let recapPage = 1;
 
 function engineOutcome(s) {
   const peak = parseFloat(s.peak_multiplier) || 1.0;
@@ -1973,9 +1976,22 @@ function engineOutcome(s) {
   return 'running';
 }
 
+function renderRecentSignalsPager(total, totalPages = Math.max(1, Math.ceil(total / recapPageSize))) {
+  const meta = document.getElementById('rsMeta');
+  const info = document.getElementById('rsPageInfo');
+  const prev = document.getElementById('rsPrev');
+  const next = document.getElementById('rsNext');
+  if (meta) meta.textContent = total > 0
+    ? `${total} sinyal · hal ${recapPage}/${totalPages} · sesuai format engine`
+    : 'sesuai format engine';
+  if (info) info.textContent = total > 0 ? `Halaman ${recapPage} / ${totalPages} · ${total} sinyal` : '—';
+  if (prev) prev.disabled = recapPage <= 1;
+  if (next) next.disabled = recapPage >= totalPages;
+}
+
 async function fetchRecapSignals() {
   try {
-    const res = await fetch('/api/signals?limit=500');
+    const res = await fetch('/api/signals?limit=1000');
     const data = await res.json();
     if (data.success && Array.isArray(data.data)) {
       recapSignals = data.data;
@@ -2065,19 +2081,24 @@ function renderEnginePerformance(force) {
   setBench('benchPFStatus', pf === null ? 'DATA BELUM CUKUP' : pf >= 1.75 ? 'PASS ✅ DI ATAS STANDAR' : 'BELOW ❌ DI BAWAH STANDAR');
   setCls('benchPFStatus', pf === null ? 'dim' : pf >= 1.75 ? 'up' : 'down');
 
-  // recent signals table (5 terakhir, newest first)
+  // recent signals table — berhalaman, terbaru dulu (10/25/50/100 per halaman)
   const tbody = document.querySelector('#recentSignalsTable tbody');
   const empty = document.getElementById('recentSignalsEmpty');
-  const recent = list.slice(-5).reverse();
-  if (!recent.length) {
+  const totalPages = Math.max(1, Math.ceil(list.length / recapPageSize));
+  if (recapPage > totalPages) recapPage = totalPages;
+  if (recapPage < 1) recapPage = 1;
+  const pageItems = list.slice().reverse().slice((recapPage - 1) * recapPageSize, recapPage * recapPageSize);
+  if (!pageItems.length) {
     tbody.innerHTML = '';
     empty.classList.remove('hidden');
     document.getElementById('recentSignalsTable').classList.add('hidden');
+    renderRecentSignalsPager(0);
     return;
   }
   empty.classList.add('hidden');
   document.getElementById('recentSignalsTable').classList.remove('hidden');
-  tbody.innerHTML = recent.map(s => {
+  renderRecentSignalsPager(list.length, totalPages);
+  tbody.innerHTML = pageItems.map(s => {
     const out = engineOutcome(s);
     const ocls = out === 'win' ? 'win' : out === 'lose' ? 'loss' : 'flat';
     const olbl = out === 'win' ? '✅ WIN' : out === 'lose' ? '❌ LOSE' : '⏳ RUNNING';
@@ -2115,6 +2136,20 @@ document.getElementById('engineTabs').addEventListener('click', e => {
   if (!btn) return;
   engineTf = btn.dataset.tf;
   document.querySelectorAll('#engineTabs button').forEach(b => b.classList.toggle('active', b === btn));
+  renderEnginePerformance(true);
+});
+
+// Pager Recent Signals (listener sekali — elemen statis di index.html)
+const _rsPrev = document.getElementById('rsPrev');
+const _rsNext = document.getElementById('rsNext');
+const _rsSize = document.getElementById('rsPageSize');
+if (_rsSize) _rsSize.value = String(recapPageSize);
+if (_rsPrev) _rsPrev.addEventListener('click', () => { recapPage--; renderEnginePerformance(true); });
+if (_rsNext) _rsNext.addEventListener('click', () => { recapPage++; renderEnginePerformance(true); });
+if (_rsSize) _rsSize.addEventListener('change', e => {
+  recapPageSize = parseInt(e.target.value, 10) || 10;
+  try { localStorage.setItem('rsPageSize', String(recapPageSize)); } catch (err) { /* private mode */ }
+  recapPage = 1;
   renderEnginePerformance(true);
 });
 
