@@ -1317,7 +1317,11 @@ function tickDecimals(step) {
 
 /* Zona waktu tampilan (Auto/WIB/WITA/WIT/UTC) — tersimpan di browser.
    Mesin konversi: tzOffsetH/tzShift (definisi di atas). */
-const TZ_OPTS = [['auto', 'Auto (Perangkat)'], ['7', 'WIB (UTC+7)'], ['8', 'WITA (UTC+8)'], ['9', 'WIT (UTC+9)'], ['0', 'UTC']];
+const TZ_OPTS = [['auto', 'Auto (Perangkat)'], ['7', 'WIB (UTC+7)'], ['8', 'WITA (UTC+8)'], ['9', 'WIT (UTC+9)']];
+for (let off = 14; off >= -12; off--) {
+  if (off === 7 || off === 8 || off === 9) continue;
+  TZ_OPTS.push([String(off), off === 0 ? 'UTC' : `UTC${off > 0 ? '+' : ''}${off}`]);
+}
 
 function fmtAxisTime(ts) {
   const s = new Date(tzShift(ts));
@@ -1487,6 +1491,10 @@ function renderPortfolio(force) {
         · modal awal ${fmtSol(data.initial)} SOL${solPrice > 0 ? ` · PnL ≈ ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solPrice).toFixed(2)} USD` : ''}
       </div>
     </div>
+    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:-6px 0 10px;padding:0 24px">
+      <span style="font-size:11px;color:var(--text-3)">Zona waktu:</span>
+      <select class="tz-sel mono" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 8px;font-size:11px"></select>
+    </div>
     <div class="pf-chart">
       <div class="eqchart" id="eqChart"></div>
       <div class="pf-chart-labels"><span>kurva profit (PnL kumulatif) · arahkan kursor untuk detail tiap trade</span><span>js v${APP_JS_VERSION} · ${data.pnlSeries.length} titik</span></div>
@@ -1528,6 +1536,7 @@ function renderPortfolio(force) {
     </div>`;
 
   mountEquityChart(document.getElementById('eqChart'), data.pnlSeries);
+  syncTzSelects();
 }
 
 /* ---------------- Wallet ---------------- */
@@ -2484,6 +2493,7 @@ document.getElementById('logAutoBtn').addEventListener('click', e => {
 setInterval(pollLogs, 3000);
 
 setCurrentPage(window.location.pathname);
+syncTzSelects();
 
 httpBootstrap();
 connectWS();
