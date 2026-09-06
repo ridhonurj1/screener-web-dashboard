@@ -483,6 +483,8 @@ async def api_ping(request):
             },
             "stats": gs,
             "slots": cluster,
+            "state_updated": state_updated,
+            "age_seconds": age_sec,
             "age_minutes": age_min,
             "updated": state_updated or str(tel["timestamp"]),
         })
