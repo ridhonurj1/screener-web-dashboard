@@ -1197,8 +1197,8 @@ function renderRecap(force) {
   set('rcWinrate', list.length ? `${wr.toFixed(0)}%` : '—', list.length ? (wr >= 50 ? 'up' : 'down') : '');
   set('rcNet', `${totalNet >= 0 ? '+' : ''}${totalNet.toFixed(4)}`, totalNet >= 0 ? 'up' : 'down');
   set('rcPF', list.length ? (pf === Infinity ? '∞' : pf.toFixed(2)) : '—', pf >= 1.5 ? 'up' : pf >= 1 ? 'dim' : 'down');
-  set('rcBest', best ? `<span style="font-size:9px;color:var(--text-4)">$${esc(best.symbol)}</span> +${netOf(best).toFixed(4)}` : '—', best ? 'up' : '');
-  set('rcWorst', worst ? `<span style="font-size:9px;color:var(--text-4)">$${esc(worst.symbol)}</span> ${netOf(worst).toFixed(4)}` : '—', worst ? 'down' : '');
+  set('rcBest', best ? `<span style="font-size:14.5px;font-weight:800;color:#f2f6fc">$${esc(best.symbol)}</span> +${netOf(best).toFixed(4)}` : '—', best ? 'up' : '');
+  set('rcWorst', worst ? `<span style="font-size:14.5px;font-weight:800;color:#f2f6fc">$${esc(worst.symbol)}</span> ${netOf(worst).toFixed(4)}` : '—', worst ? 'down' : '');
 
   // per-symbol table
   const tbody = document.querySelector('#recapSymbolTable tbody');
