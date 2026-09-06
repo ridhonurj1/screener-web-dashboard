@@ -762,7 +762,7 @@ async def api_trade(request):
                 _conn = get_db_connection(False)
                 _c = _conn.cursor()
                 if _live_full:
-                    _c.execute("UPDATE paper_trading_positions SET tokens_remaining=0, status='CLOSED', closed_at=datetime('now','localtime'), exit_reason='MANUAL DASHBOARD SELL (LIVE)' WHERE id=? AND status='OPEN'", (position_id,))
+                    _c.execute("UPDATE paper_trading_positions SET tokens_remaining=0, status='CLOSED', closed_at=datetime('now'), exit_reason='MANUAL DASHBOARD SELL (LIVE)' WHERE id=? AND status='OPEN'", (position_id,))
                 else:
                     _c.execute("UPDATE paper_trading_positions SET tokens_remaining = tokens_remaining - ? WHERE id=? AND status='OPEN'", (tokens_to_sell, position_id))
                 _conn.commit()
@@ -803,7 +803,7 @@ async def api_trade(request):
         # sama-sama mengkredit realized_sol (dulu double credit mungkin).
         cur_close = c.execute("""
             UPDATE paper_trading_positions SET tokens_remaining=0, realized_sol=?, exit_price_usd=?, current_price_usd=?,
-                current_mcap=?, status='CLOSED', exit_reason='MANUAL DASHBOARD SELL', closed_at=datetime('now','localtime'),
+                current_mcap=?, status='CLOSED', exit_reason='MANUAL DASHBOARD SELL', closed_at=datetime('now'),
                 hold_duration_sec=? WHERE id=? AND status='OPEN'
         """, (new_realized, price_usd, price_usd, float(pair.get("marketCap") or pos["current_mcap"] or 0) if pair else pos["current_mcap"], hold_sec, position_id))
         if cur_close.rowcount == 0:

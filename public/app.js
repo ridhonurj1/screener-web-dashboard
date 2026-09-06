@@ -82,9 +82,16 @@ function fmtSol(v, dp = 4) {
 
 function parseTs(s) {
   if (!s) return null;
-  const d = new Date(String(s).replace(' ', 'T'));
+  let v = String(s).replace(' ', 'T');
+  // Server menulis timestamp NAIVE dalam UTC — tanpa akhiran Z browser
+  // mengurainya sebagai waktu lokal, mencampur urutan waktu antar baris
+  // (penulis lama menyimpan localtime) dan mengacak posisi kurva PnL.
+  if (!/[Zz]$|[+-]\d{2}:?\d{2}$/.test(v)) v += 'Z';
+  const d = new Date(v);
   return isNaN(d.getTime()) ? null : d.getTime();
 }
+
+const APP_JS_VERSION = '20260906c';
 
 function relTime(ts) {
   if (!ts) return '—';
@@ -1431,7 +1438,7 @@ function renderPortfolio(force) {
     </div>
     <div class="pf-chart">
       <div class="eqchart" id="eqChart"></div>
-      <div class="pf-chart-labels"><span>kurva profit (PnL kumulatif) · arahkan kursor untuk detail tiap trade</span><span>${data.pnlSeries.length} titik</span></div>
+      <div class="pf-chart-labels"><span>kurva profit (PnL kumulatif) · arahkan kursor untuk detail tiap trade</span><span>js v${APP_JS_VERSION} · ${data.pnlSeries.length} titik</span></div>
     </div>
     <div class="pf-stats">
       <div class="pf-stat"><div class="v">${closed.length + open.length}</div><div class="k">Total Transaksi</div></div>
