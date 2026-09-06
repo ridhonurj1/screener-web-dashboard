@@ -2075,6 +2075,7 @@ function renderEnginePerformance(force) {
     const ocls = out === 'win' ? 'win' : out === 'lose' ? 'loss' : 'flat';
     const olbl = out === 'win' ? '✅ WIN' : out === 'lose' ? '❌ LOSE' : '⏳ RUNNING';
     const pnl = parseFloat(s.current_pnl_pct) || 0;
+    const peakPnl = ((parseFloat(s.peak_multiplier) || 1.0) - 1.0) * 100.0;
     const peak = parseFloat(s.peak_multiplier) || 1.0;
     const strat = String(s.strategy || 'General');
     return `
@@ -2083,7 +2084,11 @@ function renderEnginePerformance(force) {
       <td class="sym-cell"><a href="https://gmgn.ai/sol/token/${esc(s.ca)}" target="_blank" rel="noopener" style="color:var(--lime);text-decoration:none">$${esc(s.symbol)}</a></td>
       <td><span class="hist-result ${ocls}">${olbl}</span></td>
       <td class="num">${fmtUSD(s.entry_mcap)} → ${fmtUSD(s.current_mcap)}</td>
-      <td class="num" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%</td>
+      <td class="num">
+        <span style="color:${peakPnl >= 0 ? 'var(--green)' : 'var(--red)'}">${peakPnl >= 0 ? '+' : ''}${peakPnl.toFixed(1)}%</span>
+        <span style="color:var(--text-4)">→</span>
+        <span style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}%</span>
+      </td>
       <td class="num" style="color:var(--cyan)">${peak.toFixed(2)}x</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(strat)}</td>
     </tr>`;
