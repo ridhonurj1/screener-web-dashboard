@@ -821,24 +821,32 @@ function renderStats() {
   const wr = total > 0 ? (wins / total) * 100 : 0;
   // Engine sandbox starts at 0.1 SOL; guard against divide-by-zero when funds are held in open positions
   const initial = Math.max(balance - pnl, 0.1);
+  // Ekuivalen USD (harga SOL live dari feed network) — tampil di KPI + header strip
+  const solUsd = networkState.sol_price_usd || 0;
+  const usd = v => (solUsd > 0 ? ` ≈ $${(v * solUsd).toFixed(2)}` : '');
 
   // header strip
-  document.getElementById('statBalance').textContent = `${fmtSol(balance)} SOL`;
+  document.getElementById('statBalance').textContent = `${fmtSol(balance)} SOL${usd(balance)}`;
   const pnlEl = document.getElementById('statPnl');
-  pnlEl.textContent = `${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL`;
+  pnlEl.textContent = `${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL${usd(pnl)}`;
   pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('statWinRate').textContent = total > 0 ? `${wr.toFixed(1)}%` : '—';
 
   // KPI cards
   document.getElementById('kpiBalance').textContent = fmtSol(balance);
-  document.getElementById('kpiBalanceSub').textContent = `Modal awal ${fmtSol(Math.max(initial, 0.1))} SOL`;
+  document.getElementById('kpiBalanceSub').textContent = solUsd > 0
+    ? `≈ $${(balance * solUsd).toFixed(2)} USD · Modal awal ${fmtSol(Math.max(initial, 0.1))} SOL`
+    : `Modal awal ${fmtSol(Math.max(initial, 0.1))} SOL`;
 
   const kpiPnl = document.getElementById('kpiPnl');
   kpiPnl.textContent = `${pnl >= 0 ? '+' : ''}${fmtSol(pnl)}`;
   kpiPnl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
   const pnlPct = initial > 0 ? (pnl / initial) * 100 : 0;
+  const pnlUsdTxt = solUsd > 0
+    ? `${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solUsd).toFixed(2)} USD · `
+    : '';
   document.getElementById('kpiPnlSub').textContent = total > 0
-    ? `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% modal · ${total} trade`
+    ? `${pnlUsdTxt}${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% modal · ${total} trade`
     : 'Belum ada trade selesai';
 
   document.getElementById('kpiWinRate').textContent = total > 0 ? `${wr.toFixed(1)}%` : '—';
@@ -1432,10 +1440,10 @@ function renderPortfolio(force) {
   el.innerHTML = `
     <div class="pf-head">
       <div class="kpi-label" style="justify-content:center">${I.wallet} Saldo Portofolio</div>
-      <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span></div>
+      <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span>${solPrice > 0 ? ` <span class="unit" style="font-size:15px;color:var(--text-3);font-weight:600">≈ $${(B * solPrice).toFixed(2)}</span>` : ''}</div>
       <div class="pf-balance-sub">
         <b class="${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)</b>
-        · modal awal ${fmtSol(data.initial)} SOL
+        · modal awal ${fmtSol(data.initial)} SOL${solPrice > 0 ? ` · PnL ≈ ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solPrice).toFixed(2)} USD` : ''}
       </div>
     </div>
     <div class="pf-chart">
@@ -1448,7 +1456,7 @@ function renderPortfolio(force) {
       <div class="pf-stat"><div class="v" style="color:var(--cyan)">${open.length}</div><div class="k">Posisi Terbuka</div></div>
       <div class="pf-stat"><div class="v">${openValueSol > 0 ? fmtSol(openValueSol) : '—'}</div><div class="k">Nilai Posisi (SOL)</div></div>
       <div class="pf-stat"><div class="v">${volume.toFixed(2)}</div><div class="k">Volume (SOL)</div></div>
-      <div class="pf-stat"><div class="v" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)}</div><div class="k">Realized PnL</div></div>
+      <div class="pf-stat"><div class="v" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)}${solPrice > 0 ? ` <span style="font-size:10.5px;color:var(--text-3)">≈ ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solPrice).toFixed(2)}</span>` : ''}</div><div class="k">Realized PnL</div></div>
     </div>
     <div class="pf-section-title"><span>Riwayat Transaksi</span><span class="kpi-foot" style="text-transform:none;letter-spacing:0">${data.ledger.length} event</span></div>
     <div class="ledger">
