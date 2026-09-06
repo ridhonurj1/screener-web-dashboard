@@ -461,13 +461,14 @@ async def api_ping(request):
             "💡 Dibaca langsung dari SQLite yang sama dengan engine + mirror state memori (push tiap 60 detik) — 0 kuota API."
         )
 
-        age_min = None
+        age_sec = None
         if state_updated:
             try:
                 t_state = _dt.datetime.strptime(state_updated[:19], "%Y-%m-%d %H:%M:%S")
-                age_min = round((_dt.datetime.utcnow() - t_state).total_seconds() / 60.0, 1)
+                age_sec = round((_dt.datetime.utcnow() - t_state).total_seconds(), 1)
+                age_min = round(age_sec / 60.0, 1)
             except Exception:
-                age_min = None
+                age_sec = None
         return web.json_response({
             "success": True,
             "text": text,
