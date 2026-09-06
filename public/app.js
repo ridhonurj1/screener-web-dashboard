@@ -2002,13 +2002,15 @@ async function saveWalletSettings() {
       walletAutoBuy = payload.auto_buy_enabled;
       updateAutoChip();
       syncAutoBuyWarning();
-      toast('✅ Pengaturan adaptif autobuy berhasil diterapkan (RUN OK)!');
+      toast('💾 Parameter sizing pembelian berhasil disimpan!');
       if (payload.auto_buy_enabled) {
         if (payload.active_wallet_type === 'real') {
-          toast('⚠️ Auto-buy ON-CHAIN RIIL aktif dengan sizing adaptif!', 'error');
+          toast('🚨 PERHATIAN: Auto-Buy On-Chain (Wallet Asli) AKTIF! Engine siap eksekusi pembelian otomatis di blockchain!', 'error');
         } else {
-          toast('⚡ Auto-buy DEMO BOT aktif dengan sizing adaptif!');
+          toast('🤖 Auto-Buy Demo / Sandbox AKTIF! Simulasi order otomatis berjalan.');
         }
+      } else {
+        toast('⚪ Auto-Buy Nonaktif (Standby). Parameter sizing tersimpan.');
       }
     } else {
       toast('Gagal: ' + (data.error || 'unknown'), 'error');
