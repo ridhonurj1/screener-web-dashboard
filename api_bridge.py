@@ -436,6 +436,19 @@ async def api_ping(request):
         _now = time.time()
         _last429_str = f"{(_now - _last429)/60.0:.0f} menit lalu ({gs.get('last_429_slot', '?')})" if _last429 > 0 else "belum pernah sejak start"
 
+        # Counter kuota: seluruh data Health Ping berasal dari DB mirror —
+        # bila "health_ping_external" > 0, ada kebocoran API di jalur ini.
+        rpc_m = snap.get("rpc") or {}
+        dex_m = snap.get("dex") or {}
+        rpc_d = details.get("rpc") or {}
+        dex_d = details.get("dex") or {}
+        quota = {
+            "health_ping_external": 0,
+            "rpc_getslot_total": rpc_m.get("getslot") or rpc_d.get("getslot") or 0,
+            "dex_fetches_total": dex_m.get("fetches") or dex_d.get("fetches") or 0,
+            "gmgn_requests": _req,
+        }
+
         online_cnt = sum(1 for cl in cluster if cl.get("is_ready"))
         cooling_cnt = len(cluster) - online_cnt
         lines = []
@@ -506,6 +519,7 @@ async def api_ping(request):
             "age_seconds": age_sec,
             "age_minutes": age_min,
             "updated": state_updated or str(tel["timestamp"]),
+            "quota": quota,
         })
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)

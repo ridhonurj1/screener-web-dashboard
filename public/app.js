@@ -2306,6 +2306,11 @@ async function loadPing() {
     const ready = slots.filter(s => s.is_ready).length;
     set('hpReady', `${ready}`);
     set('hpReadySub', `dari ${slots.length || 15} slot`);
+    // Counter kebocoran kuota: seluruh data Health Ping berasal dari DB
+    // mirror — angka ini harus tetap 0; >0 = ada API eksternal dipanggil.
+    const q = data.quota || {};
+    set('hpQuota', q.health_ping_external ?? 0);
+    set('hpQuotaSub', `getSlot RPC: ${q.rpc_getslot_total ?? 0} · GMGN: ${q.gmgn_requests ?? 0} · DEX: ${q.dex_fetches_total ?? 0} (total engine)`);
 
     // Server & Hardware (mirror psutil dari engine)
     const hw = data.hardware || {};
