@@ -1315,26 +1315,17 @@ function tickDecimals(step) {
   return 2;
 }
 
-/* Zona waktu tampilan (Auto/WIB/WITA/WIT/UTC) — tersimpan di browser */
-let TZ_MODE = (() => { try { return localStorage.getItem('tzMode') || 'auto'; } catch (e) { return 'auto'; } })();
+/* Zona waktu tampilan (Auto/WIB/WITA/WIT/UTC) — tersimpan di browser.
+   Mesin konversi: tzOffsetH/tzShift (definisi di atas). */
 const TZ_OPTS = [['auto', 'Auto (Perangkat)'], ['7', 'WIB (UTC+7)'], ['8', 'WITA (UTC+8)'], ['9', 'WIT (UTC+9)'], ['0', 'UTC']];
 
-function tzOffsetH() {
-  return TZ_MODE === 'auto' ? -new Date().getTimezoneOffset() / 60 : (parseFloat(TZ_MODE) || 0);
-}
-
 function fmtAxisTime(ts) {
-  const d = new Date(ts);
-  const offH = tzOffsetH();
-  const s = new Date(d.getTime() + offH * 3600e3);
-  const hh = String(s.getUTCHours()).padStart(2, '0');
-  const mm = String(s.getUTCMinutes()).padStart(2, '0');
-  const day = String(s.getUTCDate()).padStart(2, '0');
-  const mon = String(s.getUTCMonth() + 1).padStart(2, '0');
-  const now = new Date();
-  const nowS = new Date(now.getTime() + offH * 3600e3);
-  if (s.getUTCDate() === nowS.getUTCDate() && s.getUTCMonth() === nowS.getUTCMonth()) return `${hh}:${mm}`;
-  return `${day}/${mon} ${hh}:${mm}`;
+  const s = new Date(tzShift(ts));
+  const hh = String(s.getHours()).padStart(2, '0');
+  const mm = String(s.getMinutes()).padStart(2, '0');
+  const now = new Date(tzShift(Date.now()));
+  if (s.toDateString() === now.toDateString()) return `${hh}:${mm}`;
+  return `${String(s.getDate()).padStart(2, '0')}/${String(s.getMonth() + 1).padStart(2, '0')} ${hh}:${mm}`;
 }
 
 function syncTzSelects() {
