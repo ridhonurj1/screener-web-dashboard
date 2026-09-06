@@ -2113,14 +2113,17 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast), opacity var(--t-fast);
 }
 
-/* Hide ugly native light-gray browser number arrows */
-.input[type="number"]::-webkit-outer-spin-button,
-.input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+/* Hide ugly native light-gray browser number arrows globally for all number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
+.slippage-input-field::-webkit-outer-spin-button,
+.slippage-input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
 }
-.input[type="number"] {
-  -moz-appearance: textfield;
+input[type="number"],
+.slippage-input-field {
+  -moz-appearance: textfield !important;
 }
 
 /* Disabled state */
