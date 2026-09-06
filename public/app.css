@@ -486,8 +486,8 @@ input, select { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 18px;
+  gap: 12px;
+  padding: 0 14px;
   background: var(--bg-1);
   border-top: 1px solid var(--border-1);
   font-family: var(--font-mono);
@@ -495,6 +495,7 @@ input, select { font-family: inherit; }
   color: var(--text-2);
   user-select: none;
   z-index: 20;
+  overflow: hidden;
 }
 
 .sb-brand { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--text-1); }
@@ -2467,10 +2468,10 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   padding-left: 22px;
   background: transparent;
   border: none;
-  opacity: 0.85;
+  opacity: 0.95;
 }
-.hist-row.hist-tranche .hist-symbol { font-size: 10.5px; font-weight: 600; }
-.hist-row.hist-tranche .hist-mult { font-size: 11px; font-weight: 700; font-family: var(--font-mono); }
+.hist-row.hist-tranche .hist-symbol { font-size: 11px; font-weight: 600; color: var(--text-3); }
+.hist-row.hist-tranche .hist-mult { font-size: 11.5px; font-weight: 700; font-family: var(--font-mono); }
 
 /* Kotak besar + kotak API kecil (Infrastruktur / Slot GMGN) */
 .hp-title { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 12px; }

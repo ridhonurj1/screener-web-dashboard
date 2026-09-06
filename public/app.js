@@ -729,7 +729,10 @@ function renderHistory() {
         <div class="hist-sub">${fmtSol(pos.sol_spent, 3)} SOL → ${fmtSol(pos.realized_sol, 3)} SOL (${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)}) · hold ${fmtHold(pos.hold_duration_sec)}</div>
       </div>
       <div class="hist-right">
-        <div class="hist-mult" style="color:${isWin ? 'var(--green)' : 'var(--red)'}">${peak.toFixed(2)}x ${r}</div>`;
+        <div class="hist-mult" style="color:${isWin ? 'var(--green)' : 'var(--red)'}">${peak.toFixed(2)}x ${r}</div>
+        <div class="hist-mcap">${fmtUSD(pos.entry_mcap)} → ${fmtUSD(pos.exit_price_usd ? pos.current_mcap : pos.entry_mcap)}</div>
+      </div>
+    </div>`;
 
     // Rincian per tranche: TP1 (ambil modal) + exit final — dari kolom
     // tp1_hit/tp1_sol_realized. PnL gabungan tetap di baris utama.
