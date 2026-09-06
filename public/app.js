@@ -1485,7 +1485,7 @@ function renderPortfolio(force) {
   el.innerHTML = `
     <div class="pf-head">
       <div class="kpi-label" style="justify-content:center">${I.wallet} Saldo Portofolio</div>
-      <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span>${solPrice > 0 ? ` <span class="unit" style="font-size:15px;color:var(--text-3);font-weight:600">≈ $${(B * solPrice).toFixed(2)}</span>` : ''}</div>
+      <div class="pf-balance">${fmtSol(B)}<span class="unit">SOL</span>${solPrice > 0 ? `<span class="unit">≈</span> <span style="color:var(--text-1)">$${(B * solPrice).toFixed(2)}</span>` : ''}</div>
       <div class="pf-balance-sub">
         <b class="${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : ''}${fmtSol(pnl)} SOL (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)</b>
         · modal awal ${fmtSol(data.initial)} SOL${solPrice > 0 ? ` · PnL ≈ ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl * solPrice).toFixed(2)} USD` : ''}
