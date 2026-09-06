@@ -735,6 +735,7 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
   position: absolute;
   top: 0; left: 0; bottom: 24px;
   width: calc(100% - 64px);
+    height: calc(100% - 24px);
   display: block;
 }
 

@@ -91,7 +91,7 @@ function parseTs(s) {
   return isNaN(d.getTime()) ? null : d.getTime();
 }
 
-const APP_JS_VERSION = '20260906c';
+const APP_JS_VERSION = '20260906e';
 
 function relTime(ts) {
   if (!ts) return '—';
@@ -1353,9 +1353,9 @@ function mountEquityChart(host, points) {
       <path class="eq-glow" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
       <path class="eq-line" vector-effect="non-scaling-stroke" d="${line}" stroke="${color}"/>
       <line class="eq-cross-svg" x1="0" x2="0" y1="0" y2="1000" stroke="rgba(199,242,132,0.35)" stroke-width="1" style="display:none" vector-effect="non-scaling-stroke"/>
-      <circle class="eq-dot-svg" r="9" fill="${color}" stroke="#0b1220" stroke-width="3" style="display:none"/>
     </svg>
     <div class="eq-plot">
+      <div class="eq-dotc" hidden></div>
       <div class="eq-last" style="left:${xPct(n - 1)}%;top:${yPct(vs[n - 1])}%"></div>
       <div class="eq-tip" hidden></div>
     </div>
@@ -1368,7 +1368,7 @@ function mountEquityChart(host, points) {
   // hover crosshair + tooltip
   const svg = host.querySelector('.eq-svg');
   const cross = host.querySelector('.eq-cross-svg');
-  const dot = host.querySelector('.eq-dot-svg');
+  const dot = host.querySelector('.eq-dotc');
   const tip = host.querySelector('.eq-tip');
 
   const move = e => {
@@ -1384,16 +1384,15 @@ function mountEquityChart(host, points) {
     const p = points[i];
     const prev = points[Math.max(0, i - 1)];
     const d = p.v - prev.v;
-    // Crosshair + titik digambar DI DALAM SVG (viewBox 1000x1000) — satu
-    // ruang koordinat dengan kurva, sehingga titik tidak mungkin melayang
-    // di luar garis bagaimana pun bentuk stretch/zoom layarnya.
+    // Titik diposisikan PIKSEL-EXAK memetakan koordinat viewBox ke rect svg:
+    // (px(i), py(v)) di ruang 1000x1000 -> piksel layar. Selalu tepat di kurva.
     const vxPx = px(i), vyPx = py(p.v);
     cross.setAttribute('x1', vxPx.toFixed(1));
     cross.setAttribute('x2', vxPx.toFixed(1));
     cross.style.display = '';
-    dot.setAttribute('cx', vxPx.toFixed(1));
-    dot.setAttribute('cy', vyPx.toFixed(1));
-    dot.style.display = '';
+    dot.hidden = false;
+    dot.style.left = ((vxPx / 1000) * rect.width).toFixed(1) + 'px';
+    dot.style.top = ((vyPx / 1000) * rect.height).toFixed(1) + 'px';
     tip.hidden = false;
     tip.style.left = `clamp(74px, ${xPct(i)}%, calc(100% - 74px))`;
     tip.style.top = `calc(${yPct(p.v)}% - 12px)`;
@@ -1404,7 +1403,7 @@ function mountEquityChart(host, points) {
       : `<b style="color:${color}">${pnlTxt}</b>
          <span>${fmtAxisTime(p.t)} · titik awal</span>`;
   };
-  const leave = () => { cross.style.display = 'none'; dot.style.display = 'none'; tip.hidden = true; };
+  const leave = () => { cross.style.display = 'none'; dot.hidden = true; tip.hidden = true; };
   svg.addEventListener('mousemove', move);
   svg.addEventListener('mouseleave', leave);
 }
