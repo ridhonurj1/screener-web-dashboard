@@ -510,8 +510,20 @@
 
       <!-- WALLET -->
       <div id="drawerTabWallet" class="drawer-pane hidden">
+        <!-- WALLET SELECTOR / SWITCHER -->
+        <div style="margin-bottom:12px;padding:4px;background:var(--bg-1);border:1px solid var(--border-1);border-radius:var(--r-md);display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <button type="button" class="btn" id="btnSelectDemoWallet" onclick="selectWalletMode('demo')" style="padding:9px 12px;font-size:12px;font-weight:800;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;gap:6px">
+            <span class="dot" style="width:7px;height:7px;background:var(--green);border-radius:50%"></span>
+            Dompet Demo
+          </button>
+          <button type="button" class="btn" id="btnSelectRealWallet" onclick="selectWalletMode('real')" style="padding:9px 12px;font-size:12px;font-weight:800;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;gap:6px">
+            <span class="dot" style="width:7px;height:7px;background:var(--text-4);border-radius:50%"></span>
+            Wallet 1 (Real)
+          </button>
+        </div>
+
         <!-- DEMO BOT WALLET (SANDBOX) -->
-        <div class="wallet-card" style="border-color:rgba(40,200,64,0.3);background:linear-gradient(180deg, rgba(40,200,64,0.04) 0%, var(--bg-1) 100%)">
+        <div class="wallet-card" id="cardDemoWallet" style="border-color:rgba(40,200,64,0.3);background:linear-gradient(180deg, rgba(40,200,64,0.04) 0%, var(--bg-1) 100%)">
           <div class="wallet-id-row">
             <div style="display:flex;align-items:center;gap:11px">
               <div style="width:40px;height:40px;border-radius:12px;background:var(--green-dim);border:1px solid var(--green-border);display:grid;place-items:center;color:var(--green)">
@@ -519,8 +531,8 @@
               </div>
               <div>
                 <div style="display:flex;align-items:center;gap:6px">
-                  <span style="font-size:13px;font-weight:800">Demo Bot Sandbox Wallet</span>
-                  <span class="chip" style="background:var(--green-dim);color:var(--green);border-color:var(--green-border);font-size:9.5px">DEFAULT RUNNER</span>
+                  <span style="font-size:13px;font-weight:800">Dompet Demo (Sandbox)</span>
+                  <span class="chip" id="chipDemoActive" style="background:var(--green-dim);color:var(--green);border-color:var(--green-border);font-size:9.5px">AKTIF TERPILIH</span>
                 </div>
                 <div style="font-size:11px;color:var(--text-3)">Akun simulasi quant autonomous (35+ trade aktif)</div>
               </div>
@@ -550,7 +562,7 @@
         </div>
 
         <!-- REAL ON-CHAIN WALLET -->
-        <div class="wallet-card">
+        <div class="wallet-card" id="cardRealWallet">
           <div class="wallet-id-row">
             <div style="display:flex;align-items:center;gap:11px">
               <div style="width:40px;height:40px;border-radius:12px;background:var(--lime-dim);border:1px solid var(--lime-border);display:grid;place-items:center;color:var(--lime)">
@@ -558,7 +570,7 @@
               </div>
               <div>
                 <div style="display:flex;align-items:center;gap:6px">
-                  <span style="font-size:13px;font-weight:800">Real Solana Wallet</span>
+                  <span style="font-size:13px;font-weight:800">Dompet Wallet 1 (Real)</span>
                   <span class="chip" id="walletTypeBadge" style="font-size:9.5px">STANDBY</span>
                 </div>
                 <div style="font-size:11px;color:var(--text-3)">Wallet engine asli di blockchain Solana</div>
@@ -836,6 +848,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906r"></script>
+  <script src="/app.js?v=20260906s"></script>
 </body>
 </html>

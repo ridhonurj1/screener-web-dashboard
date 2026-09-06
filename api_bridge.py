@@ -1263,6 +1263,32 @@ async def static_file_handler(request):
     # re-fetch tanpa menyulitkan update (index tetap no-cache).
     return web.FileResponse(os.path.join(PUBLIC_DIR, name), headers={'Cache-Control': 'public, max-age=300'})
 
+async def api_switch_active_wallet(request):
+    try:
+        body = await request.json()
+        user_id = body.get("user_id", "6166029678")
+        target_type = "real" if str(body.get("wallet_type", "")).lower() in ("real", "wallet_1", "wallet1") else "demo"
+        
+        conn = get_db_connection(False)
+        c = conn.cursor()
+        c.execute("UPDATE user_trading_wallets SET active_wallet_type=? WHERE user_id=?", (target_type, user_id))
+        conn.commit()
+        conn.close()
+
+        if HAS_ENGINE_MODULES and hasattr(wallet_manager, "_wallet_cache"):
+            w_cache = wallet_manager._wallet_cache.get(str(user_id))
+            if w_cache:
+                w_cache["active_wallet_type"] = target_type
+
+        return web.json_response({
+            "success": True,
+            "active_wallet_type": target_type,
+            "message": f"Dompet aktif berhasil dialihkan ke {'Real Wallet 1' if target_type == 'real' else 'Demo Bot Sandbox'}"
+        })
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
 def create_app():
     app = web.Application(middlewares=[auth_middleware])
     app.router.add_get('/', index_handler)
@@ -1290,6 +1316,7 @@ def create_app():
     # dipicu preload/preview apapun, dan tanpa auth bisa dibaca siapa pun)
     app.router.add_post('/api/wallet/export', api_export_wallet)
     app.router.add_post('/api/wallet/settings', api_update_wallet_settings)
+    app.router.add_post('/api/wallet/switch', api_switch_active_wallet)
     app.router.add_post('/api/wallet/import', api_wallet_import)
     app.router.add_get('/api/trade/preview', api_trade_preview)
     app.router.add_post('/api/trade', api_trade)

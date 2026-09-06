@@ -1591,6 +1591,101 @@ function renderPortfolio(force) {
 
 /* ---------------- Wallet ---------------- */
 
+let activeWalletMode = 'demo'; // 'demo' | 'real'
+
+async function selectWalletMode(mode) {
+  activeWalletMode = mode === 'real' ? 'real' : 'demo';
+  const isReal = activeWalletMode === 'real';
+
+  // Update UI Selector Buttons
+  const btnDemo = document.getElementById('btnSelectDemoWallet');
+  const btnReal = document.getElementById('btnSelectRealWallet');
+  if (btnDemo) {
+    btnDemo.style.background = !isReal ? 'var(--bg-3)' : 'transparent';
+    btnDemo.style.borderColor = !isReal ? 'var(--green-border)' : 'var(--border-1)';
+    btnDemo.style.color = !isReal ? 'var(--green)' : 'var(--text-3)';
+    const dot = btnDemo.querySelector('.dot');
+    if (dot) dot.style.background = !isReal ? 'var(--green)' : 'var(--text-4)';
+  }
+  if (btnReal) {
+    btnReal.style.background = isReal ? 'var(--bg-3)' : 'transparent';
+    btnReal.style.borderColor = isReal ? 'var(--lime-border)' : 'var(--border-1)';
+    btnReal.style.color = isReal ? 'var(--lime)' : 'var(--text-3)';
+    const dot = btnReal.querySelector('.dot');
+    if (dot) dot.style.background = isReal ? 'var(--lime)' : 'var(--text-4)';
+  }
+
+  // Update Cards Highlighting & Badges
+  const cardDemo = document.getElementById('cardDemoWallet');
+  const cardReal = document.getElementById('cardRealWallet');
+  const chipDemo = document.getElementById('chipDemoActive');
+  const chipReal = document.getElementById('walletTypeBadge');
+  const headerPreview = document.getElementById('headerWalletPreview');
+
+  if (cardDemo && cardReal) {
+    if (!isReal) {
+      cardDemo.style.borderColor = 'rgba(40,200,64,0.45)';
+      cardDemo.style.background = 'linear-gradient(180deg, rgba(40,200,64,0.06) 0%, var(--bg-1) 100%)';
+      cardReal.style.borderColor = 'var(--border-1)';
+      cardReal.style.background = 'var(--bg-1)';
+      if (chipDemo) {
+        chipDemo.textContent = 'AKTIF TERPILIH';
+        chipDemo.style.background = 'var(--green-dim)';
+        chipDemo.style.color = 'var(--green)';
+        chipDemo.style.borderColor = 'var(--green-border)';
+      }
+      if (chipReal) {
+        chipReal.textContent = 'STANDBY';
+        chipReal.style.background = 'var(--bg-4)';
+        chipReal.style.color = 'var(--text-3)';
+        chipReal.style.borderColor = 'var(--border-2)';
+      }
+      if (headerPreview) headerPreview.textContent = 'Dompet Demo';
+    } else {
+      cardReal.style.borderColor = 'rgba(180,255,50,0.45)';
+      cardReal.style.background = 'linear-gradient(180deg, rgba(180,255,50,0.06) 0%, var(--bg-1) 100%)';
+      cardDemo.style.borderColor = 'var(--border-1)';
+      cardDemo.style.background = 'var(--bg-1)';
+      if (chipReal) {
+        chipReal.textContent = 'AKTIF TERPILIH (REAL)';
+        chipReal.style.background = 'var(--lime-dim)';
+        chipReal.style.color = 'var(--lime)';
+        chipReal.style.borderColor = 'var(--lime-border)';
+      }
+      if (chipDemo) {
+        chipDemo.textContent = 'STANDBY';
+        chipDemo.style.background = 'var(--bg-4)';
+        chipDemo.style.color = 'var(--text-3)';
+        chipDemo.style.borderColor = 'var(--border-2)';
+      }
+      if (headerPreview && window._realPubkey) {
+        headerPreview.textContent = `Wallet 1 (${window._realPubkey.slice(0, 4)}…${window._realPubkey.slice(-4)})`;
+      } else if (headerPreview) {
+        headerPreview.textContent = 'Wallet 1 (Real)';
+      }
+    }
+  }
+
+  // Update dropdown target engine di settings
+  const selEngine = document.getElementById('settingWalletType');
+  if (selEngine) selEngine.value = activeWalletMode;
+
+  // Sinkronkan ke backend API
+  try {
+    const res = await fetch('/api/wallet/switch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_type: activeWalletMode })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast(`✅ Berhasil beralih ke ${isReal ? 'Dompet Wallet 1 (Real)' : 'Dompet Demo (Sandbox)'}!`);
+    }
+  } catch (e) {
+    console.error('selectWalletMode error:', e);
+  }
+}
+
 let walletLoaded = false;
 let currentAutoBuyMode = 'usd';
 
@@ -1653,9 +1748,8 @@ async function loadWalletData() {
         }
       }
 
-      // Update Real Wallet
+      window._realPubkey = w.public_key;
       document.getElementById('drawerWalletPubkey').textContent = w.public_key;
-      document.getElementById('headerWalletPreview').textContent = `${w.public_key.slice(0, 4)}…${w.public_key.slice(-4)}`;
       document.getElementById('drawerWalletSol').textContent = `${fmtSol(w.sol_balance ?? 0)} SOL`;
       
       // Adaptive fields
@@ -1674,13 +1768,10 @@ async function loadWalletData() {
       if (w.slippage_pct !== undefined && document.getElementById('settingSlippage')) {
         document.getElementById('settingSlippage').value = w.slippage_pct;
       }
-      if (w.active_wallet_type && document.getElementById('settingWalletType')) {
-        document.getElementById('settingWalletType').value = w.active_wallet_type;
-        const b = document.getElementById('walletTypeBadge');
-        if (b) {
-          b.textContent = w.active_wallet_type === 'real' ? 'ACTIVE ON-CHAIN' : 'STANDBY';
-          b.style.color = w.active_wallet_type === 'real' ? 'var(--green)' : 'var(--text-3)';
-        }
+      if (w.active_wallet_type) {
+        selectWalletMode(w.active_wallet_type);
+      } else {
+        selectWalletMode('demo');
       }
 
       switchAutoBuyMode(w.auto_buy_mode || 'usd');
