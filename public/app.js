@@ -1970,7 +1970,37 @@ async function pollNetwork() {
 /* ---------------- Page routing ---------------- */
 
   const ROUTE_PAGE = { '/': 'terminal', '/portofolio': 'portofolio', '/evaluasi': 'evaluasi', '/recap': 'recap', '/healthping': 'healthping', '/logs': 'logs' };
-const currentPage = ROUTE_PAGE[window.location.pathname.replace(/\/+$/, '') || '/'] || 'terminal';
+let currentPage = ROUTE_PAGE[window.location.pathname.replace(/\/+$/, '') || '/'] || 'terminal';
+
+// Client-side routing: pindah halaman TANPA reload dokumen — header, WS,
+// dan seluruh state tetap hidup (tidak ada blinking saat ganti halaman).
+function setCurrentPage(path) {
+  currentPage = ROUTE_PAGE[path.replace(/\/+$/, '') || '/'] || 'terminal';
+  activatePage();
+  if (currentPage === 'portofolio') renderPortfolio(true);
+  if (currentPage === 'evaluasi') renderRecap(true);
+  if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); renderMilestones(); }
+  if (currentPage === 'healthping') loadPing();
+  if (currentPage === 'logs') pollLogs();
+}
+
+function navigate(path) {
+  if (window.location.pathname.replace(/\/+$/, '') === path.replace(/\/+$/, '')) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  history.pushState({}, '', path);
+  setCurrentPage(path);
+  window.scrollTo({ top: 0 });
+}
+
+document.querySelectorAll('.pagenav a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    navigate(a.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', () => setCurrentPage(window.location.pathname));
 
 function activatePage() {
   document.body.dataset.page = currentPage;
@@ -2360,12 +2390,7 @@ document.getElementById('logAutoBtn').addEventListener('click', e => {
 
 setInterval(pollLogs, 3000);
 
-activatePage();
-if (currentPage === 'portofolio') renderPortfolio(true);
-if (currentPage === 'evaluasi') renderRecap(true);
-if (currentPage === 'recap') { fetchRecapSignals(); renderEnginePerformance(true); renderMilestones(); }
-if (currentPage === 'healthping') loadPing();
-if (currentPage === 'logs') pollLogs();
+setCurrentPage(window.location.pathname);
 
 httpBootstrap();
 connectWS();
