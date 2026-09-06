@@ -1068,6 +1068,7 @@ def create_app():
     app.router.add_get('/portofolio', index_handler)
     app.router.add_get('/evaluasi', index_handler)
     app.router.add_get('/recap', index_handler)
+    app.router.add_get('/healthping', index_handler)
     app.router.add_get('/logs', index_handler)
     app.router.add_get('/ws/live', websocket_handler)
     app.router.add_get('/{filename}', static_file_handler)
