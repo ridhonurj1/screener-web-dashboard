@@ -689,7 +689,9 @@ async def api_update_wallet_settings(request):
         user_id = body.get("user_id", "6166029678")
         # Server-side clamp: API tidak boleh memercayai nilai bebas dari body
         buy_sol = min(max(float(body.get("default_buy_sol", 0.1) or 0.1), 0.001), 5.0)
-        slippage = min(max(float(body.get("slippage_pct", 15.0) or 15.0), 0.1), 50.0)
+        # Auto Slippage: 0.0 menandakan mode dinamis (Jupiter auto-slippage)
+        req_slip = float(body.get("slippage_pct", 15.0) or 0.0)
+        slippage = 0.0 if req_slip <= 0.0 else min(max(req_slip, 0.1), 50.0)
         auto_buy = 1 if body.get("auto_buy_enabled") else 0
         
         # Pengaturan adaptif sizing

@@ -1766,7 +1766,13 @@ async function loadWalletData() {
         document.getElementById('settingMaxSol').value = w.auto_buy_max_sol;
       }
       if (w.slippage_pct !== undefined && document.getElementById('settingSlippage')) {
-        document.getElementById('settingSlippage').value = w.slippage_pct;
+        const sl = parseFloat(w.slippage_pct);
+        if (sl <= 0) {
+          toggleAutoSlippage(true);
+        } else {
+          toggleAutoSlippage(false);
+          document.getElementById('settingSlippage').value = sl;
+        }
       }
       if (w.active_wallet_type) {
         selectWalletMode(w.active_wallet_type);
@@ -1801,6 +1807,83 @@ function updateAutoChip() {
   document.getElementById('autoBuyChipState').textContent = walletAutoBuy ? 'ON' : 'OFF';
 }
 
+let slippageIsAuto = false;
+
+function toggleAutoSlippage(forcedState) {
+  slippageIsAuto = typeof forcedState === 'boolean' ? forcedState : !slippageIsAuto;
+  const btn = document.getElementById('btnSlippageAuto');
+  const input = document.getElementById('settingSlippage');
+  const btnUp = document.getElementById('stepSlippageUp');
+  const btnDown = document.getElementById('stepSlippageDown');
+
+  if (slippageIsAuto) {
+    if (btn) {
+      btn.textContent = 'AUTO ON';
+      btn.style.background = 'var(--lime)';
+      btn.style.color = '#000';
+      btn.style.borderColor = 'var(--lime)';
+    }
+    if (input) {
+      input.type = 'text';
+      input.value = 'Auto (Dinamis)';
+      input.disabled = true;
+      input.style.color = 'var(--lime)';
+      input.style.fontWeight = '700';
+      input.style.background = 'rgba(199, 242, 132, 0.06)';
+      input.style.borderColor = 'rgba(199, 242, 132, 0.3)';
+    }
+    if (btnUp) {
+      btnUp.disabled = true;
+      btnUp.style.opacity = '0.25';
+      btnUp.style.cursor = 'not-allowed';
+    }
+    if (btnDown) {
+      btnDown.disabled = true;
+      btnDown.style.opacity = '0.25';
+      btnDown.style.cursor = 'not-allowed';
+    }
+  } else {
+    if (btn) {
+      btn.textContent = 'AUTO';
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-3)';
+      btn.style.borderColor = 'var(--border-2)';
+    }
+    if (input) {
+      input.disabled = false;
+      input.type = 'number';
+      input.style.color = 'var(--text-1)';
+      input.style.fontWeight = 'normal';
+      input.style.background = 'var(--bg-0)';
+      input.style.borderColor = 'var(--border-2)';
+      if (input.value.includes('Auto') || !input.value) input.value = '15';
+    }
+    if (btnUp) {
+      btnUp.disabled = false;
+      btnUp.style.opacity = '1';
+      btnUp.style.cursor = 'pointer';
+    }
+    if (btnDown) {
+      btnDown.disabled = false;
+      btnDown.style.opacity = '1';
+      btnDown.style.cursor = 'pointer';
+    }
+  }
+}
+
+function stepInput(inputId, delta) {
+  const el = document.getElementById(inputId);
+  if (!el || el.disabled) return;
+  const current = parseFloat(el.value) || 0;
+  const step = parseFloat(el.step) || 1;
+  const decimals = (String(step).split('.')[1] || '').length;
+  let next = current + delta;
+  if (el.min !== '' && next < parseFloat(el.min)) next = parseFloat(el.min);
+  if (el.max !== '' && next > parseFloat(el.max)) next = parseFloat(el.max);
+  el.value = next.toFixed(decimals);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function initWalletEvents() {
   ['settingMinUsd', 'settingMaxUsd', 'settingMinSol', 'settingMaxSol'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateAdaptiveSimLabels);
@@ -1817,13 +1900,15 @@ async function saveWalletSettings() {
     btn.innerHTML = 'Menyimpan...';
   }
 
+  const slippageVal = slippageIsAuto ? 0.0 : (parseFloat(document.getElementById('settingSlippage')?.value) || 15.0);
+
   const payload = {
     auto_buy_mode: currentAutoBuyMode,
     auto_buy_min_usd: parseFloat(document.getElementById('settingMinUsd')?.value) || 2.0,
     auto_buy_max_usd: parseFloat(document.getElementById('settingMaxUsd')?.value) || 5.0,
     auto_buy_min_sol: parseFloat(document.getElementById('settingMinSol')?.value) || 0.05,
     auto_buy_max_sol: parseFloat(document.getElementById('settingMaxSol')?.value) || 0.20,
-    slippage_pct: parseFloat(document.getElementById('settingSlippage')?.value) || 15.0,
+    slippage_pct: slippageVal,
     auto_buy_enabled: document.getElementById('autoBuySwitch').checked,
     active_wallet_type: document.getElementById('settingWalletType')?.value || 'demo'
   };

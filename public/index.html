@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-  <link rel="stylesheet" href="/app.css?v=20260906e">
+  <link rel="stylesheet" href="/app.css?v=20260906f">
 </head>
 <body>
   <div id="app">
@@ -660,11 +660,23 @@
             <div id="sectionRangeUsd" class="settings-grid">
               <div>
                 <label class="field-label" for="settingMinUsd">Min Buy (USD $)</label>
-                <input type="number" step="0.5" min="0.5" max="100" id="settingMinUsd" class="input" value="2.0">
+                <div class="stepper-input-wrap">
+                  <input type="number" step="0.5" min="0.5" max="100" id="settingMinUsd" class="input" value="2.0">
+                  <div class="stepper-btns">
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', 0.5)">▲</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinUsd', -0.5)">▼</button>
+                  </div>
+                </div>
               </div>
               <div>
                 <label class="field-label" for="settingMaxUsd">Max Buy (USD $)</label>
-                <input type="number" step="0.5" min="1.0" max="500" id="settingMaxUsd" class="input" value="5.0">
+                <div class="stepper-input-wrap">
+                  <input type="number" step="0.5" min="1.0" max="500" id="settingMaxUsd" class="input" value="5.0">
+                  <div class="stepper-btns">
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', 0.5)">▲</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxUsd', -0.5)">▼</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -672,11 +684,23 @@
             <div id="sectionRangeSol" class="settings-grid hidden">
               <div>
                 <label class="field-label" for="settingMinSol">Min Buy (SOL)</label>
-                <input type="number" step="0.01" min="0.01" max="5" id="settingMinSol" class="input" value="0.05">
+                <div class="stepper-input-wrap">
+                  <input type="number" step="0.01" min="0.01" max="5" id="settingMinSol" class="input" value="0.05">
+                  <div class="stepper-btns">
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', 0.01)">▲</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMinSol', -0.01)">▼</button>
+                  </div>
+                </div>
               </div>
               <div>
                 <label class="field-label" for="settingMaxSol">Max Buy (SOL)</label>
-                <input type="number" step="0.01" min="0.01" max="10" id="settingMaxSol" class="input" value="0.20">
+                <div class="stepper-input-wrap">
+                  <input type="number" step="0.01" min="0.01" max="10" id="settingMaxSol" class="input" value="0.20">
+                  <div class="stepper-btns">
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', 0.01)">▲</button>
+                    <button type="button" class="stepper-btn" onclick="stepInput('settingMaxSol', -0.01)">▼</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -690,8 +714,19 @@
 
           <div class="settings-grid" style="margin-top:10px">
             <div>
-              <label class="field-label" for="settingSlippage">Slippage (%)</label>
-              <input type="number" step="1" min="0" max="100" id="settingSlippage" class="input">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <label class="field-label" for="settingSlippage" style="margin:0">Slippage (%)</label>
+                <button type="button" class="btn" id="btnSlippageAuto" onclick="toggleAutoSlippage()" style="padding:2px 8px;font-size:10px;font-weight:800;border-radius:var(--r-full);background:var(--lime-dim);color:var(--lime);border-color:var(--lime-border);transition:all var(--t-fast)">
+                  AUTO
+                </button>
+              </div>
+              <div class="stepper-input-wrap">
+                <input type="number" step="1" min="1" max="100" id="settingSlippage" class="input" value="15">
+                <div class="stepper-btns">
+                  <button type="button" class="stepper-btn" id="stepSlippageUp" onclick="stepInput('settingSlippage', 1)">▲</button>
+                  <button type="button" class="stepper-btn" id="stepSlippageDown" onclick="stepInput('settingSlippage', -1)">▼</button>
+                </div>
+              </div>
             </div>
             <div>
               <label class="field-label" for="settingWalletType">Target Eksekusi Engine</label>
@@ -848,6 +883,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906s"></script>
+  <script src="/app.js?v=20260906u"></script>
 </body>
 </html>
