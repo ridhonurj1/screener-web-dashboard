@@ -644,6 +644,7 @@ function buildPositionCard(pos) {
       <div class="cell"><div class="k">Score</div><div class="v" style="color:${scoreColor(pos.score)}">${parseInt(pos.score) || 0}</div></div>
     </div>
     <div class="pos-foot">
+      <span class="chip" data-ref="tp1chip" style="display:none;font-size:9.5px;background:rgba(47,215,118,0.12);color:var(--green);border-color:rgba(47,215,118,0.35)"></span>
       <span class="chip" style="font-size:9.5px">${esc(pos.strategy || 'Ponyin')}</span>
       <div style="display:flex;align-items:center;gap:9px">
         <span class="sig-age" data-ref="age"></span>
@@ -667,6 +668,20 @@ function updatePositionCard(pos) {
   const pnl = pnlOf(pos);
   const win = pnl >= 0;
   const peak = parseFloat(pos.peak_multiplier) || 1;
+
+  // TP1 chip: modal aman + sisa token (moonbag) setelah TP1
+  const t1chip = entry.refs.tp1chip;
+  if (t1chip) {
+    const hit = parseInt(pos.tp1_hit) === 1 || pos.tp1_hit === true;
+    if (hit) {
+      const t1sol = parseFloat(pos.tp1_sol_realized) || 0;
+      const sisa = parseFloat(pos.tokens_remaining) || 0;
+      t1chip.style.display = '';
+      t1chip.textContent = `TP1 ✓ +${t1sol.toFixed(4)} SOL · sisa ${fmtSol(sisa, 0)} token`;
+    } else {
+      t1chip.style.display = 'none';
+    }
+  }
 
   entry.refs.pnl.innerHTML = `<span class="arrow">${win ? '▲' : '▼'}</span>${win ? '+' : ''}${pnl.toFixed(2)}%`;
   entry.refs.pnl.style.color = win ? 'var(--green)' : 'var(--red)';
@@ -702,9 +717,9 @@ function renderHistory() {
     const r = pos.r_result !== null && pos.r_result !== undefined && pos.r_result !== ''
       ? `${parseFloat(pos.r_result) >= 0 ? '+' : ''}${parseFloat(pos.r_result).toFixed(2)}R` : '';
     const cls = isWin ? 'win' : 'loss';
-    const label = exit.includes('TP') ? 'TAKE PROFIT' : exit.includes('SL') ? 'STOP LOSS' : 'CLOSED';
+    const label = exit.includes('TP') ? 'TAKE PROFIT' : exit.includes('SL') ? 'STOP LOSS' : exit.includes('TRAILING') ? 'TRAILING STOP' : exit.includes('STAGNANCY') ? 'STAGNANCY' : 'CLOSED';
     const pnlSol = (parseFloat(pos.realized_sol) || 0) - (parseFloat(pos.sol_spent) || 0);
-    return `
+    const mainRow = `
     <div class="hist-row" onclick="openChartModal('${jsq(pos.token_ca)}', '${jsq(pos.symbol)}', '', '')">
       <div class="hist-left">
         <div class="hist-symbol-row">
@@ -714,10 +729,29 @@ function renderHistory() {
         <div class="hist-sub">${fmtSol(pos.sol_spent, 3)} SOL → ${fmtSol(pos.realized_sol, 3)} SOL (${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)}) · hold ${fmtHold(pos.hold_duration_sec)}</div>
       </div>
       <div class="hist-right">
-        <div class="hist-mult" style="color:${isWin ? 'var(--green)' : 'var(--red)'}">${peak.toFixed(2)}x ${r}</div>
-        <div class="hist-mcap">${fmtUSD(pos.entry_mcap)} → ${fmtUSD(pos.exit_price_usd ? pos.current_mcap : pos.entry_mcap)}</div>
-      </div>
-    </div>`;
+        <div class="hist-mult" style="color:${isWin ? 'var(--green)' : 'var(--red)'}">${peak.toFixed(2)}x ${r}</div>`;
+
+    // Rincian per tranche: TP1 (ambil modal) + exit final — dari kolom
+    // tp1_hit/tp1_sol_realized. PnL gabungan tetap di baris utama.
+    const tp1Sol = parseFloat(pos.tp1_sol_realized) || 0;
+    const hasTp1 = (parseInt(pos.tp1_hit) === 1 || pos.tp1_hit === true) && tp1Sol > 0;
+    let tranches = '';
+    if (hasTp1) {
+      const finalSol = (parseFloat(pos.realized_sol) || 0) - tp1Sol;
+      tranches += `
+      <div class="hist-row hist-tranche" onclick="openChartModal('${jsq(pos.token_ca)}', '${jsq(pos.symbol)}', '', '')">
+        <div class="hist-left"><div class="hist-symbol-row"><span class="hist-symbol" style="color:var(--text-3)">└ TP1 · ambil modal</span></div></div>
+        <div class="hist-right"><div class="hist-mult" style="color:var(--green)">+${tp1Sol.toFixed(4)} SOL</div></div>
+      </div>`;
+      if (finalSol > 0) {
+        tranches += `
+      <div class="hist-row hist-tranche" onclick="openChartModal('${jsq(pos.token_ca)}', '${jsq(pos.symbol)}', '', '')">
+        <div class="hist-left"><div class="hist-symbol-row"><span class="hist-symbol" style="color:var(--text-3)">└ ${esc(label)}</span></div></div>
+        <div class="hist-right"><div class="hist-mult" style="color:${finalSol >= 0 ? 'var(--green)' : 'var(--red)'}">${finalSol >= 0 ? '+' : ''}${finalSol.toFixed(4)} SOL</div></div>
+      </div>`;
+      }
+    }
+    return mainRow + tranches;
   }).join('');
 }
 

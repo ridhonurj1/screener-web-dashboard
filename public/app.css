@@ -2459,6 +2459,19 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 .hp-st-cool { color: #ffc24d; font-weight: 700; }
 .hp-st-idle { color: var(--text-4); }
 
+/* Riwayat: baris rincian per tranche (TP1 / exit final) */
+.hist-row.hist-tranche {
+  margin-top: -6px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 22px;
+  background: transparent;
+  border: none;
+  opacity: 0.85;
+}
+.hist-row.hist-tranche .hist-symbol { font-size: 10.5px; font-weight: 600; }
+.hist-row.hist-tranche .hist-mult { font-size: 11px; font-weight: 700; font-family: var(--font-mono); }
+
 /* Kotak besar + kotak API kecil (Infrastruktur / Slot GMGN) */
 .hp-title { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 12px; }
 .hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; }
