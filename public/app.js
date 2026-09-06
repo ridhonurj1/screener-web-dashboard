@@ -2208,6 +2208,18 @@ if (_rsSize) _rsSize.addEventListener('change', e => {
 });
 
 /* ---------------- Health Ping page ---------------- */
+const HP_INFRA = [
+  { key: 'qn',   name: 'QuickNode RPC Dedicated', latKey: 'rpc_latency_ms',        sub: () => `Slot: ${window.__hpTel?.rpc_slot ?? '—'}` },
+  { key: 'jup',  name: 'Jupiter Ultra Swap API',  latKey: 'jupiter_latency_ms',    sub: () => 'Warm Keep-Alive Pool' },
+  { key: 'jito', name: 'Jito MEV Block Engine',   latKey: 'jito_latency_ms',       sub: () => 'Private Mempool', standby: true },
+  { key: 'dex',  name: 'DexScreener API',         latKey: 'dexscreener_latency_ms', sub: () => window.__hpDexOk === false ? 'Chunk fetch gagal' : 'Verified DEX Pairs' },
+  { key: 'rug',  name: 'RugCheck Security',       latKey: 'rugcheck_latency_ms',   sub: () => 'Mint/Freeze Defense' },
+];
+
+function hpDot(cls, label) {
+  return `<span class="hp-dot ${cls}"></span><span class="hp-dot-lbl ${cls}">${label}</span>`;
+}
+
 async function loadPing() {
   try {
     const res = await fetch('/api/ping');
@@ -2218,7 +2230,11 @@ async function loadPing() {
       if (meta) meta.textContent = data.error || 'Snapshot belum tersedia';
       return;
     }
-    if (meta) meta.textContent = `Mirror DB: ${data.state_updated || '—'} (usia ${data.age_seconds ?? '—'}s) · Telemetri: ${data.telemetry?.timestamp || '—'} · 0 kuota API`;
+    const tel = data.telemetry || {};
+    window.__hpTel = tel;
+    window.__hpDexOk = data.dex_ok;
+    const age = data.age_seconds ?? null;
+    if (meta) meta.textContent = `Mirror DB: ${data.state_updated || '—'} (usia ${age ?? '—'}s) · Telemetri: ${tel.timestamp || '—'} · 0 kuota API`;
 
     const st = data.stats || {};
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -2229,21 +2245,47 @@ async function loadPing() {
     set('hpCacheSub', served > 0 ? `Cache hit ${((st.cache_hits || 0) / served * 100).toFixed(1)}%` : '—');
     set('hp429', st.hits_429 || 0);
     set('hp429Sub', st.last_429_ts > 0 ? `terakhir ${Math.max(1, Math.round((Date.now() / 1000 - st.last_429_ts) / 60))} menit lalu` : 'belum pernah');
-
     const slots = data.slots || [];
     const ready = slots.filter(s => s.is_ready).length;
     set('hpReady', `${ready}`);
     set('hpReadySub', `dari ${slots.length || 15} slot`);
 
-    const tbody = document.querySelector('#hpSlotTable tbody');
-    if (tbody) {
-      tbody.innerHTML = slots.map(s => {
-        let cls = 'hp-st-idle', lbl = '⚪ STANDBY (Ready)';
-        if (!s.is_ready) { cls = 'hp-st-cool'; lbl = `🟡 COOLDOWN ${s.rem_sec}s`; }
-        else if (s.is_active) { cls = 'hp-st-active'; lbl = '🟢 AKTIF'; }
-        const lastTxt = s.last_used_s > 9000 ? '—' : (s.last_used_s < 3 ? 'baru saja' : `${Math.round(s.last_used_s)}s lalu`);
-        return `<tr><td class="num">${s.slot}</td><td class="mono" style="font-size:10.5px">${esc(s.proxy_label || s.name || '')}</td><td class="${cls}">${lbl}</td><td class="num">${lastTxt}</td></tr>`;
+    // Kotak besar: INFRASTRUKTUR EKSEKUSI
+    const infra = document.getElementById('hpInfra');
+    if (infra) {
+      infra.innerHTML = HP_INFRA.map(api => {
+        const lat = parseFloat(tel[api.latKey] || 0);
+        let dotCls = 'dot-ok', dotLbl = 'AKTIF';
+        if (api.standby) { dotCls = 'dot-idle'; dotLbl = 'STANDBY'; }
+        else if (tel.timestamp && age !== null && age > 900) { dotCls = 'dot-err'; dotLbl = 'DATA BASI'; }
+        return `<div class="hp-api">
+          <div class="hp-api-head">${hpDot(dotCls, dotLbl)}</div>
+          <div class="hp-api-name">${esc(api.name)}</div>
+          <div class="hp-api-lat mono">${lat > 0 ? lat.toFixed(1) + ' ms' : '—'}</div>
+          <div class="hp-api-sub">${esc(api.sub())}</div>
+        </div>`;
       }).join('');
+    }
+
+    // Kotak besar: SLOT GMGN (shadowing realtime dari mirror)
+    const slotBox = document.getElementById('hpSlots');
+    if (slotBox) {
+      if (!slots.length) {
+        slotBox.innerHTML = '<div class="hp-api-sub" style="padding:6px 2px">Menunggu mirror state pertama dari engine (±2 detik setelah start)…</div>';
+      } else {
+        slotBox.innerHTML = slots.map(s => {
+          let dotCls = 'dot-idle', lbl = 'STANDBY';
+          if (!s.is_ready) { dotCls = 'dot-cool'; lbl = `COOLDOWN ${s.rem_sec}s`; }
+          else if (s.is_active) { dotCls = 'dot-ok'; lbl = 'AKTIF'; }
+          const lastTxt = s.last_used_s > 9000 ? 'belum dipakai' : (s.last_used_s < 3 ? `${s.last_used_s.toFixed(1)}s lalu` : `${Math.round(s.last_used_s)}s lalu`);
+          return `<div class="hp-api">
+            <div class="hp-api-head">${hpDot(dotCls, lbl)}</div>
+            <div class="hp-api-name mono">Slot ${s.slot}</div>
+            <div class="hp-api-sub">${esc(s.proxy_label || s.name || '')}</div>
+            <div class="hp-api-sub">dipakai ${esc(lastTxt)}</div>
+          </div>`;
+        }).join('');
+      }
     }
     if (box && box.textContent !== data.text) box.textContent = data.text;
   } catch (e) { /* non-critical */ }

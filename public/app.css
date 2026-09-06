@@ -2458,3 +2458,22 @@ body[data-page]:not([data-page="terminal"]) .kpi-strip { display: none; }
 .hp-st-active { color: var(--green); font-weight: 700; }
 .hp-st-cool { color: #ffc24d; font-weight: 700; }
 .hp-st-idle { color: var(--text-4); }
+
+/* Kotak besar + kotak API kecil (Infrastruktur / Slot GMGN) */
+.hp-title { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 12px; }
+.hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; }
+.hp-api { background: var(--bg-1); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 10px 12px; }
+.hp-api-head { margin-bottom: 6px; }
+.hp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.hp-dot-lbl { font-size: 9.5px; font-weight: 800; letter-spacing: 0.07em; vertical-align: middle; }
+.hp-dot.dot-ok   { background: #28c840; box-shadow: 0 0 6px rgba(40, 200, 64, 0.55); }
+.hp-dot.dot-err  { background: #ff5470; box-shadow: 0 0 6px rgba(255, 84, 112, 0.55); }
+.hp-dot.dot-cool { background: #ffc24d; box-shadow: 0 0 6px rgba(255, 194, 77, 0.5); }
+.hp-dot.dot-idle { background: #8b98ad; }
+.hp-dot-lbl.dot-ok   { color: var(--green); }
+.hp-dot-lbl.dot-err  { color: var(--red); }
+.hp-dot-lbl.dot-cool { color: #ffc24d; }
+.hp-dot-lbl.dot-idle { color: var(--text-4); }
+.hp-api-name { font-size: 12px; font-weight: 700; color: var(--text-1); }
+.hp-api-lat { font-size: 15px; font-weight: 800; color: var(--cyan); margin-top: 3px; }
+.hp-api-sub { font-size: 10px; color: var(--text-4); margin-top: 2px; }

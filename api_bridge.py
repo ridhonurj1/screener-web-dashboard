@@ -394,6 +394,7 @@ async def api_ping(request):
         if not tel:
             return web.json_response({"success": False, "error": "Belum ada snapshot telemetri"}, status=404)
 
+        _now_utc = _dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
         r_slot = tel["rpc_slot"] if tel["rpc_slot"] not in (None, 0) else "Synced"
         r_lat = float(tel["rpc_latency_ms"] or 0)
         jup_lat = float(tel["jupiter_latency_ms"] or 35.8)
@@ -440,7 +441,7 @@ async def api_ping(request):
 
         text = (
             "🏓 [SYSTEM API LATENCY & HEALTH AUDIT — ZERO-API CACHE] ⚡\n\n"
-            f"⏱️ Waktu Snapshot DB: {tel['timestamp']}\n"
+            f"⏱️ Waktu Snapshot DB: {_now_utc}\n"
             f"⚡ Kecepatan Baca DB (Dashboard): {db_read_ms:.2f} ms (0 Kuota API Terpakai!)\n\n"
             "🌐 INFRASTRUKTUR EKSEKUSI (SNAPSHOT TERAKHIR):\n"
             f"├─ 🟢 QuickNode RPC Dedicated: {r_lat:.1f} ms (Slot: {r_slot})\n"
@@ -473,6 +474,8 @@ async def api_ping(request):
             "success": True,
             "text": text,
             "db_read_ms": round(db_read_ms, 2),
+            "snapshot_utc": _now_utc,
+            "dex_ok": bool(snap.get("dex_ok", True)),
             "telemetry": {
                 "timestamp": str(tel["timestamp"]),
                 "rpc_slot": r_slot,

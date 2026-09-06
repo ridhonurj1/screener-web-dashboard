@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-  <link rel="stylesheet" href="/app.css?v=20260906f">
+  <link rel="stylesheet" href="/app.css?v=20260906g">
 </head>
 <body>
   <div id="app">
@@ -339,34 +339,25 @@
       <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
     </div>
 
-    <section class="page-card recap-tree-card">
-      <div class="term-chrome">
-        <span class="term-dot" style="background:#ff5f57"></span>
-        <span class="term-dot" style="background:#febc2e"></span>
-        <span class="term-dot" style="background:#28c840"></span>
-        <span class="term-title mono">ponyin@engine: ~/health - zero-api mirror</span>
-      </div>
-      <div style="padding:14px 16px">
-        <div class="hp-cards">
-          <div class="hp-card"><div class="hp-k">Kecepatan Baca DB</div><div class="hp-v mono" id="hpDbRead">—</div><div class="hp-s">0 kuota API</div></div>
-          <div class="hp-card"><div class="hp-k">Request Keluar</div><div class="hp-v mono" id="hpReq">—</div><div class="hp-s">GMGN sejak start</div></div>
-          <div class="hp-card"><div class="hp-k">200 OK</div><div class="hp-v mono" id="hpOk">—</div><div class="hp-s" id="hpCacheSub">—</div></div>
-          <div class="hp-card"><div class="hp-k">HTTP 429</div><div class="hp-v mono" id="hp429">—</div><div class="hp-s" id="hp429Sub">—</div></div>
-          <div class="hp-card"><div class="hp-k">Slot Siap</div><div class="hp-v mono" id="hpReady">—</div><div class="hp-s" id="hpReadySub">dari 15 slot</div></div>
-        </div>
+    <div class="hp-cards" style="margin-bottom:14px">
+      <div class="hp-card"><div class="hp-k">Kecepatan Baca DB</div><div class="hp-v mono" id="hpDbRead">—</div><div class="hp-s">0 kuota API</div></div>
+      <div class="hp-card"><div class="hp-k">Request Keluar</div><div class="hp-v mono" id="hpReq">—</div><div class="hp-s">GMGN sejak start</div></div>
+      <div class="hp-card"><div class="hp-k">200 OK</div><div class="hp-v mono" id="hpOk">—</div><div class="hp-s" id="hpCacheSub">—</div></div>
+      <div class="hp-card"><div class="hp-k">HTTP 429</div><div class="hp-v mono" id="hp429">—</div><div class="hp-s" id="hp429Sub">—</div></div>
+      <div class="hp-card"><div class="hp-k">Slot Siap</div><div class="hp-v mono" id="hpReady">—</div><div class="hp-s" id="hpReadySub">dari 15 slot</div></div>
+    </div>
 
-        <table class="data-table" id="hpSlotTable" style="margin-top:14px">
-          <thead><tr><th class="num">Slot</th><th>Account / Proxy</th><th>Status</th><th class="num">Terakhir Dipakai</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="hpEmpty" class="empty-state hidden">
-          <div class="title">Menunggu mirror state pertama dari engine…</div>
-          <div class="hint">Engine menulis state tiap siklus tracker (±2 detik).</div>
-        </div>
-      </div>
+    <section class="page-card" style="margin-bottom:14px">
+      <div class="hp-title">🌐 INFRASTRUKTUR EKSEKUSI</div>
+      <div class="hp-grid" id="hpInfra"></div>
     </section>
 
-    <details style="margin-top:12px">
+    <section class="page-card" style="margin-bottom:14px">
+      <div class="hp-title">🛡️ SLOT GMGN DECADUAL SHIELD <span class="mono" style="font-size:10px;color:var(--text-4)">— Tor &amp; Ed25519</span></div>
+      <div class="hp-grid" id="hpSlots"></div>
+    </section>
+
+    <details>
       <summary class="mono" style="font-size:11px;color:var(--text-3);cursor:pointer">Format teks engine (/ping)</summary>
       <div id="pingBox" class="recap-box mono" style="white-space:pre-wrap;font-size:12px;line-height:1.8;padding:16px 18px;margin-top:8px">—</div>
     </details>
