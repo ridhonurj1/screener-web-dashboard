@@ -574,7 +574,7 @@ async def api_ping(request):
             f"├─ 200 kosong: {_empty:,} | Error lain: {_errs:,}\n"
             f"├─ Auth ditolak (401/403): {int(gs.get('auth_fail', 0) or 0):,}\n"
             f"└─ 429 terakhir: {_last429_str}\n\n"
-            "🛡️ 15-SLOT GMGN DECADUAL SHIELD (Tor & Ed25519):\n"
+            "🛡️ 15-SLOT GMGN DECADUAL SHIELD (Multi-WARP & Ed25519):\n"
             f"📊 Status In-Memory: 🟢 {online_cnt} Ready / 🟡 {cooling_cnt} Rotating\n"
             + slot_lines + "\n\n"
             "💡 Dibaca langsung dari SQLite yang sama dengan engine + mirror state memori (push tiap 60 detik) — 0 kuota API."
