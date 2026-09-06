@@ -2126,7 +2126,7 @@ function renderEnginePerformance(force) {
       <td class="num" style="color:var(--text-4)">#${esc(String(s.id ?? 'SIG'))}</td>
       <td class="sym-cell"><a href="https://gmgn.ai/sol/token/${esc(s.ca)}" target="_blank" rel="noopener" style="color:var(--lime);text-decoration:none">$${esc(s.symbol)}</a></td>
       <td><span class="hist-result ${ocls}">${olbl}</span></td>
-      <td class="num">${fmtUSD(s.entry_mcap)} → ${fmtUSD(s.current_mcap)}</td>
+      <td class="num">${fmtUSD(s.entry_mcap)} → ${(s.status === 'CLOSED' && !(parseFloat(s.current_mcap) > 0)) ? '<span style="color:var(--text-4)" title="Pair token hilang dari DEX saat sinyal ditutup">PAIR MATI</span>' : fmtUSD(s.current_mcap)}</td>
       <td class="num">
         <span style="color:${peakPnl >= 0 ? 'var(--green)' : 'var(--red)'}">${peakPnl >= 0 ? '+' : ''}${peakPnl.toFixed(1)}%</span>
         <span style="color:var(--text-4)">→</span>
