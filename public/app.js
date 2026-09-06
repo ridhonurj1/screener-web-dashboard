@@ -210,6 +210,7 @@ function avatarHTML(ca, symbol, style = '') {
 /* ---------------- Token logos (Jupiter, batched via bridge) ---------------- */
 
 let logosFetchTimer = null;
+let logosRetryTimer = null;
 function queueLogoFetch() {
   clearTimeout(logosFetchTimer);
   logosFetchTimer = setTimeout(fetchLogos, 400);
@@ -245,8 +246,22 @@ async function fetchLogos() {
       }
     } catch (e) { /* logos are cosmetic — stay silent */ }
   }
+  // CA yang belum mendapat logo dijadwalkan ulang: server meng-cache hasil
+  // negatif hanya 4 menit, jadi retry berkala akan mendapatkan logo begitu
+  // sumber (Jupiter/DexScreener) mengindeks token tersebut.
+  let pending = false;
+  for (const ca of cas) {
+    if (!TOKEN_LOGOS.has(ca)) {
+      LOGOS_FETCHED.delete(ca);
+      pending = true;
+    }
+  }
   applyLogos();
   applySocials();
+  if (pending) {
+    clearTimeout(logosRetryTimer);
+    logosRetryTimer = setTimeout(fetchLogos, 90000);
+  }
 }
 
 function applyLogoToRoot(root) {

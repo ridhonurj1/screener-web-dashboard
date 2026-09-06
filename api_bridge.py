@@ -3,12 +3,15 @@ import hmac
 import json
 import math
 import secrets
+import socket
 import sqlite3
 import os
 import sys
 import time
+import ipaddress
 from collections import deque
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
+from yarl import URL
 from aiohttp import web, ClientSession, ClientTimeout
 # ---------------------------------------------------------------------------
 # Engine linkage.
@@ -1218,13 +1221,54 @@ async def api_network(request):
     })
 
 JUPITER_TOKENS_URL = "https://lite-api.jup.ag/tokens/v2/search?query={ids}"
+DEXSCREENER_TOKEN_URL = "https://api.dexscreener.com/latest/dex/tokens/{cas}"
+TOKEN_LOGO_NEG_TTL = 240.0  # cache negatif (kedua sumber tanpa logo): 4 menit
+
+async def _dexscreener_logos(session, cas):
+    """Fallback sumber kedua: imageUrl dari pasangan DexScreener berlikuiditas
+    tertinggi (Jupiter sering tak mengindeks token fresh/dead)."""
+    out = {}
+    for i in range(0, len(cas), 30):
+        batch = cas[i:i + 30]
+        try:
+            async with session.get(DEXSCREENER_TOKEN_URL.format(cas=",".join(batch)),
+                                   timeout=ClientTimeout(total=10)) as resp:
+                d = await resp.json(content_type=None)
+        except Exception:
+            continue
+        best = {}
+        for pr in (d.get("pairs") or []):
+            base = pr.get("baseToken") or {}
+            ca = (base.get("address") or "").strip()
+            info = pr.get("info") or {}
+            img = info.get("imageUrl")
+            if not ca or not img:
+                continue
+            liq = float(((pr.get("liquidity") or {}).get("usd")) or 0)
+            cur = best.get(ca)
+            if not cur or liq > cur[0]:
+                soc = {}
+                for k, v in (("twitter", info.get("twitter")),
+                             ("telegram", info.get("telegram")),
+                             ("website", info.get("website"))):
+                    if v:
+                        soc[k] = v
+                best[ca] = (liq, img, soc)
+        for ca, (_liq, img, soc) in best.items():
+            out[ca] = {"url": img, "socials": soc}
+    return out
 
 async def api_token_meta(request):
     """Token logos + socials via Jupiter Tokens API, merged into a TTL cache."""
     cas = [c.strip() for c in (request.query.get("cas") or "").split(",") if 40 <= len(c.strip()) <= 50][:100]
     session = request.app["http_session"]
     now = time.time()
-    missing = [ca for ca in cas if ca not in TOKEN_LOGO_CACHE or now - TOKEN_LOGO_CACHE[ca]["ts"] > TOKEN_LOGO_TTL]
+
+    def _stale(entry):
+        ttl = TOKEN_LOGO_TTL if entry.get("url") else TOKEN_LOGO_NEG_TTL
+        return now - entry["ts"] > ttl
+
+    missing = [ca for ca in cas if ca not in TOKEN_LOGO_CACHE or _stale(TOKEN_LOGO_CACHE[ca])]
     if missing:
         try:
             async with session.get(JUPITER_TOKENS_URL.format(ids=",".join(missing)), timeout=ClientTimeout(total=10)) as resp:
@@ -1254,32 +1298,81 @@ async def api_token_meta(request):
                     TOKEN_LOGO_CACHE[tid] = entry
         except Exception:
             pass
+        # Fallback DexScreener untuk CA yang Jupiter tak beri ikon.
+        still_missing = [ca for ca in missing
+                         if ca not in TOKEN_LOGO_CACHE or not TOKEN_LOGO_CACHE[ca].get("url")]
+        if still_missing:
+            dex = await _dexscreener_logos(session, still_missing)
+            for ca, ent in dex.items():
+                prev = TOKEN_LOGO_CACHE.get(ca)
+                soc = dict((prev.get("socials") or {}) if prev else {})
+                for k, v in ent["socials"].items():
+                    soc.setdefault(k, v)
+                TOKEN_LOGO_CACHE[ca] = {"url": ent["url"], "ts": now, "socials": soc}
         for ca in missing:
             if ca not in TOKEN_LOGO_CACHE:
                 TOKEN_LOGO_CACHE[ca] = {"url": None, "ts": now, "socials": {}}
+            elif not TOKEN_LOGO_CACHE[ca].get("url"):
+                TOKEN_LOGO_CACHE[ca]["ts"] = now  # segarkan ts cache negatif
     logos = {ca: TOKEN_LOGO_CACHE[ca]["url"] for ca in cas if ca in TOKEN_LOGO_CACHE}
     socials = {ca: TOKEN_LOGO_CACHE[ca].get("socials") or {} for ca in cas if ca in TOKEN_LOGO_CACHE}
     return web.json_response({"success": True, "logos": logos, "socials": socials})
 
 # --- PROXY IKON TOKEN (same-origin) ---
-# CDN logo pihak ketiga (mis. edit-image-proxy.j7tracker.io — domain "tracker")
-# sering diblok ekstensi adblock browser / anti-hotlink, sehingga ikon token
-# gagal tampil. Browser memuat gambar via /api/img?u=... (same-origin) yang
-# selalu berhasil; host upstream dibatasi allowlist ketat (anti-SSRF).
+# CDN logo pihak ketiga sering diblok ekstensi adblock browser / anti-hotlink,
+# sehingga ikon token gagal tampil. Browser memuat gambar via /api/img?u=...
+# (same-origin) yang selalu berhasil. Guard SSRF: skema https + (host di
+# allowlist ATAU host resolve ke IP publik) — IP privat/loopback/metadata
+# selalu ditolak, termasuk pada setiap hop redirect.
 
 IMG_UPSTREAM_HOSTS = (
     "j7tracker.io", "axiom-cdn.io", "arweave.net", "arweave.dev", "pump.fun",
-    "ipfs.io", "cf-ipfs.com", "cloudflare-ipfs.com", "dexscreener.com",
+    "ipfs.io", "cf-ipfs.com", "cloudflare-ipfs.com", "ipfscdn.io", "dweb.link",
+    "w3s.link", "nftstorage.link", "pinata.cloud", "uxento.io", "dexscreener.com",
     "gmgn.ai", "nostrassets.com", "coinmarketcap.com", "assets.coingecko.com",
-    "coingecko.com", "cdn.jsdelivr.net", "solana.fm", "wsrv.nl",
+    "coingecko.com", "cdn.jsdelivr.net", "solana.fm", "wsrv.nl", "muxlink.xyz",
 )
 IMG_CACHE = {}          # url -> {"data": bytes, "ct": str, "ts": float}
 IMG_CACHE_TTL = 6 * 3600
 IMG_CACHE_MAX = 400
+_IMG_MAX_REDIRECTS = 4
 
 def _img_host_allowed(host: str) -> bool:
+    """Allowlist eksplisit ATAU host publik mana pun (CDN ikon beragam dan
+    sering bertambah). Kriteria keluar: semua hasil resolve harus IP global —
+    privat/loopback/link-local/CGNAT (100.64/10, termasuk Tailscale)/reserved
+    ditolak keras."""
     host = (host or "").lower().split(":")[0]
-    return any(host == d or host.endswith("." + d) for d in IMG_UPSTREAM_HOSTS)
+    if not host:
+        return False
+    if any(host == d or host.endswith("." + d) for d in IMG_UPSTREAM_HOSTS):
+        return True
+    try:
+        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
+    except Exception:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if not ip.is_global:
+            return False
+    return True
+
+def _canonical_img_url(url: str) -> str:
+    """Gateway IPFS publik lama (ipfs.io dkk.) sering mati/lambat —
+    arahkan ulang ke gateway w3s.link yang lebih andal."""
+    try:
+        p = urlparse(url)
+        if (p.hostname or "").lower() in ("ipfs.io", "cf-ipfs.com", "cloudflare-ipfs.com") \
+                and p.path.startswith("/ipfs/"):
+            return f"https://w3s.link{p.path}"
+    except Exception:
+        pass
+    return url
 
 async def api_img(request):
     raw = (request.query.get("u") or "").strip()
@@ -1299,16 +1392,47 @@ async def api_img(request):
                             headers={"Cache-Control": "public, max-age=3600"})
 
     session = request.app["http_session"]
+    data = None
+    ct = None
+    url = _canonical_img_url(raw)
     try:
-        async with session.get(raw, timeout=ClientTimeout(total=10)) as resp:
-            ct = (resp.headers.get("Content-Type") or "").split(";")[0].strip() or "image/png"
-            if resp.status != 200 or not ct.startswith("image/"):
-                return web.Response(status=404)
-            data = await resp.read()
-            if len(data) > 1_000_000:
-                return web.Response(status=413)
+        # Redirect diikuti manual agar setiap hop divalidasi (anti-SSRF).
+        for _hop in range(_IMG_MAX_REDIRECTS + 1):
+            hop = urlparse(url)
+            if hop.scheme != "https" or not _img_host_allowed(hop.hostname or ""):
+                return web.Response(status=403)
+            async with session.get(url, timeout=ClientTimeout(total=10), allow_redirects=False) as resp:
+                if resp.status in (301, 302, 303, 307, 308):
+                    loc = resp.headers.get("Location") or ""
+                    if not loc:
+                        return web.Response(status=502)
+                    url = str(URL(url).join(URL(loc)))
+                    continue
+                ct = (resp.headers.get("Content-Type") or "").split(";")[0].strip() or "image/png"
+                if resp.status != 200 or not ct.startswith("image/"):
+                    return web.Response(status=404)
+                data = await resp.read()
+                break
     except Exception:
         return web.Response(status=502)
+    if data is None:
+        return web.Response(status=502)   # terlalu banyak redirect / tanpa isi
+
+    if len(data) > 1_000_000:
+        # Gambar mentah kegedean untuk avatar (mis. PNG 2.7MB di IPFS) —
+        # kecilkan via wsrv.nl (sudah di allowlist) ke webp 128px.
+        small = f"https://wsrv.nl/?url={quote(url, safe='')}&w=128&h=128&fit=cover&output=webp&q=80"
+        try:
+            async with session.get(small, timeout=ClientTimeout(total=12), allow_redirects=False) as resp:
+                if resp.status == 200:
+                    sct = (resp.headers.get("Content-Type") or "").split(";")[0].strip() or "image/webp"
+                    sdata = await resp.read()
+                    if sct.startswith("image/") and 0 < len(sdata) <= 1_000_000:
+                        data, ct = sdata, sct
+        except Exception:
+            pass
+        if len(data) > 1_000_000:
+            return web.Response(status=413)
 
     if len(IMG_CACHE) >= IMG_CACHE_MAX:
         for k in sorted(IMG_CACHE, key=lambda k: IMG_CACHE[k]["ts"])[:64]:
