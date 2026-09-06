@@ -1010,7 +1010,30 @@ function checkPumpAndCto() {
 function applyPayload(data) {
   state.lastTickAt = Date.now();
 
-  if (data.stats) state.stats = data.stats;
+  // Simpan raw demo data di demoSnapshot agar switching instan
+  if (data.stats) window._demoStats = data.stats;
+  if (data.active_positions) window._demoActivePositions = data.active_positions;
+  if (data.closed_positions) window._demoClosedPositions = data.closed_positions;
+
+  if (activeWalletMode === 'real') {
+    // Mode Real: jangan biarkan payload demo menimpa stats Real
+    state.stats = window._realStats || {
+      current_balance_sol: window._realBalanceSol || 0.0,
+      total_realized_sol: 0.0,
+      total_trades: 0,
+      win_trades: 0,
+      lose_trades: 0,
+      active_positions_count: 0,
+      total_signals_count: (data.stats && data.stats.total_signals_count) || state.signals.length
+    };
+    state.activePositions = window._realActivePositions || [];
+    state.closedPositions = window._realClosedPositions || [];
+  } else {
+    if (data.stats) state.stats = data.stats;
+    if (data.active_positions) state.activePositions = data.active_positions;
+    if (data.closed_positions) state.closedPositions = data.closed_positions;
+  }
+
   if (Array.isArray(data.signals)) {
     state.signals = data.signals;
     for (const s of data.signals) {
@@ -1018,8 +1041,6 @@ function applyPayload(data) {
       if (p > 0) pushPrice(s.ca, p);
     }
   }
-  if (data.active_positions) state.activePositions = data.active_positions;
-  if (data.closed_positions) state.closedPositions = data.closed_positions;
 
   renderSignals();
   renderActivePositions();
@@ -1097,8 +1118,8 @@ async function httpBootstrap() {
   try {
     const [rSig, rPos, rStats] = await Promise.all([
       fetch('/api/signals').then(r => r.json()),
-      fetch('/api/positions').then(r => r.json()),
-      fetch('/api/stats').then(r => r.json())
+      fetch(`/api/positions?wallet_mode=${activeWalletMode}`).then(r => r.json()),
+      fetch(`/api/stats?wallet_mode=${activeWalletMode}`).then(r => r.json())
     ]);
     if (rStats?.data && !state.lastTickAt) state.stats = rStats.data;
     if (rSig?.data && !state.lastTickAt) state.signals = rSig.data;
@@ -1670,6 +1691,29 @@ async function selectWalletMode(mode) {
   const selEngine = document.getElementById('settingWalletType');
   if (selEngine) selEngine.value = activeWalletMode;
 
+  // Re-apply state & trigger visual render
+  if (isReal) {
+    state.stats = window._realStats || {
+      current_balance_sol: window._realBalanceSol || 0.0,
+      total_realized_sol: 0.0,
+      total_trades: 0,
+      win_trades: 0,
+      lose_trades: 0,
+      active_positions_count: 0,
+      total_signals_count: (state.stats && state.stats.total_signals_count) || state.signals.length
+    };
+    state.activePositions = window._realActivePositions || [];
+    state.closedPositions = window._realClosedPositions || [];
+  } else {
+    if (window._demoStats) state.stats = window._demoStats;
+    if (window._demoActivePositions) state.activePositions = window._demoActivePositions;
+    if (window._demoClosedPositions) state.closedPositions = window._demoClosedPositions;
+  }
+  renderActivePositions();
+  renderHistory();
+  renderPortfolio(true);
+  renderStats();
+
   // Sinkronkan ke backend API
   try {
     const res = await fetch('/api/wallet/switch', {
@@ -1681,6 +1725,43 @@ async function selectWalletMode(mode) {
     if (data.success) {
       toast(`✅ Berhasil beralih ke ${isReal ? 'Dompet Wallet 1 (Real)' : 'Dompet Demo (Sandbox)'}!`);
     }
+
+    // Refresh data stats & positions dari endpoint sesuai mode
+    const [pRes, sRes] = await Promise.all([
+      fetch(`/api/positions?wallet_mode=${activeWalletMode}`).then(r => r.json()),
+      fetch(`/api/stats?wallet_mode=${activeWalletMode}`).then(r => r.json())
+    ]);
+    if (isReal) {
+      if (sRes?.data) {
+        window._realStats = sRes.data;
+        state.stats = sRes.data;
+      }
+      if (pRes?.active) {
+        window._realActivePositions = pRes.active;
+        state.activePositions = pRes.active;
+      }
+      if (pRes?.closed) {
+        window._realClosedPositions = pRes.closed;
+        state.closedPositions = pRes.closed;
+      }
+    } else {
+      if (sRes?.data) {
+        window._demoStats = sRes.data;
+        state.stats = sRes.data;
+      }
+      if (pRes?.active) {
+        window._demoActivePositions = pRes.active;
+        state.activePositions = pRes.active;
+      }
+      if (pRes?.closed) {
+        window._demoClosedPositions = pRes.closed;
+        state.closedPositions = pRes.closed;
+      }
+    }
+    renderActivePositions();
+    renderHistory();
+    renderPortfolio(true);
+    renderStats();
   } catch (e) {
     console.error('selectWalletMode error:', e);
   }
@@ -1749,6 +1830,7 @@ async function loadWalletData() {
       }
 
       window._realPubkey = w.public_key;
+      window._realBalanceSol = parseFloat(w.sol_balance) || 0.0;
       document.getElementById('drawerWalletPubkey').textContent = w.public_key;
       document.getElementById('drawerWalletSol').textContent = `${fmtSol(w.sol_balance ?? 0)} SOL`;
       

@@ -342,14 +342,107 @@ async def api_signals(request):
     return web.json_response({"success": True, "count": len(data), "data": data})
 
 async def api_positions(request):
+    wallet_mode = request.query.get("wallet_mode", "").lower()
+    user_id = request.query.get("user_id", "6166029678")
+    
+    # Jika wallet_mode='real' -> baca dari user_trading_positions
+    if wallet_mode == "real":
+        try:
+            conn = get_db_connection(True)
+            c = conn.cursor()
+            c.execute("SELECT * FROM user_trading_positions WHERE user_id=? AND status='OPEN' ORDER BY id DESC", (user_id,))
+            real_active = [dict(r) for r in c.fetchall()]
+            c.execute("SELECT * FROM user_trading_positions WHERE user_id=? AND status!='OPEN' ORDER BY id DESC LIMIT 50", (user_id,))
+            real_closed = [dict(r) for r in c.fetchall()]
+            conn.close()
+            return web.json_response({
+                "success": True,
+                "wallet_mode": "real",
+                "active": real_active,
+                "closed": real_closed
+            })
+        except Exception:
+            return web.json_response({
+                "success": True,
+                "wallet_mode": "real",
+                "active": [],
+                "closed": []
+            })
+
     return web.json_response({
         "success": True,
+        "wallet_mode": "demo",
         "active": in_memory_state["active_positions"],
         "closed": in_memory_state["closed_positions"]
     })
 
 async def api_stats(request):
-    return web.json_response({"success": True, "data": in_memory_state["stats"]})
+    wallet_mode = request.query.get("wallet_mode", "").lower()
+    user_id = request.query.get("user_id", "6166029678")
+
+    if wallet_mode == "real":
+        try:
+            conn = get_db_connection(True)
+            c = conn.cursor()
+            # Cek saldo real wallet
+            c.execute("SELECT public_key FROM user_trading_wallets WHERE user_id=?", (user_id,))
+            w_row = c.fetchone()
+            pubkey = w_row["public_key"] if w_row else ""
+            
+            # Hitung stats real trades
+            c.execute("SELECT COUNT(*), SUM(realized_pnl_sol) FROM user_trading_positions WHERE user_id=? AND status!='OPEN'", (user_id,))
+            t_row = c.fetchone()
+            total_real_trades = t_row[0] or 0
+            pnl_real_sol = float(t_row[1] or 0.0)
+            
+            c.execute("SELECT COUNT(*) FROM user_trading_positions WHERE user_id=? AND status!='OPEN' AND realized_pnl_sol > 0", (user_id,))
+            win_real_trades = c.fetchone()[0] or 0
+            
+            c.execute("SELECT COUNT(*) FROM user_trading_positions WHERE user_id=? AND status='OPEN'", (user_id,))
+            active_real_count = c.fetchone()[0] or 0
+            c.execute("SELECT COALESCE(MAX(rowid), 0) FROM signals")
+            total_signals_count = c.fetchone()[0] or 0
+            conn.close()
+
+            # Real balance
+            real_bal_sol = 0.0
+            if HAS_ENGINE_MODULES and pubkey:
+                try:
+                    real_bal_sol = await wallet_manager.get_sol_balance(pubkey)
+                except Exception:
+                    real_bal_sol = 0.0
+
+            return web.json_response({
+                "success": True,
+                "wallet_mode": "real",
+                "data": {
+                    "initial_capital_sol": 0.0,
+                    "current_balance_sol": real_bal_sol,
+                    "total_realized_sol": pnl_real_sol,
+                    "total_trades": total_real_trades,
+                    "win_trades": win_real_trades,
+                    "lose_trades": total_real_trades - win_real_trades,
+                    "active_positions_count": active_real_count,
+                    "total_signals_count": total_signals_count
+                }
+            })
+        except Exception:
+            return web.json_response({
+                "success": True,
+                "wallet_mode": "real",
+                "data": {
+                    "initial_capital_sol": 0.0,
+                    "current_balance_sol": 0.0,
+                    "total_realized_sol": 0.0,
+                    "total_trades": 0,
+                    "win_trades": 0,
+                    "lose_trades": 0,
+                    "active_positions_count": 0,
+                    "total_signals_count": in_memory_state["stats"].get("total_signals_count", 0)
+                }
+            })
+
+    return web.json_response({"success": True, "wallet_mode": "demo", "data": in_memory_state["stats"]})
 
 async def api_recap(request):
     timeframe = request.query.get("timeframe", "daily").lower()
