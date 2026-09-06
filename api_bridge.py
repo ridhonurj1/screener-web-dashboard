@@ -604,15 +604,55 @@ async def api_get_wallet(request):
     try:
         conn = get_db_connection(True)
         c = conn.cursor()
-        c.execute("SELECT user_id, public_key, default_buy_sol, auto_buy_enabled, slippage_pct, created_at FROM user_trading_wallets WHERE user_id=?", (user_id,))
+        c.execute("""
+            SELECT user_id, public_key, default_buy_sol, auto_buy_enabled, slippage_pct,
+                   auto_buy_mode, auto_buy_min_sol, auto_buy_max_sol, auto_buy_min_usd, auto_buy_max_usd,
+                   active_wallet_type, created_at
+            FROM user_trading_wallets WHERE user_id=?
+        """, (user_id,))
         row = c.fetchone()
+        
+        # Ambil juga demo / sandbox wallet stats
+        c.execute("SELECT initial_capital_sol, current_balance_sol, total_trades, win_trades, total_realized_sol FROM paper_account_stats WHERE id=1")
+        demo_row = c.fetchone()
+        demo_stats = dict(demo_row) if demo_row else {
+            "initial_capital_sol": 0.1,
+            "current_balance_sol": 0.1,
+            "total_trades": 0,
+            "win_trades": 0,
+            "total_realized_sol": 0.0
+        }
+        
         conn.close()
 
         if not row:
             return web.json_response({"success": False, "error": "Wallet not found"})
 
         wallet_data = dict(row)
-        return web.json_response({"success": True, "wallet": wallet_data})
+        
+        # Real on-chain balance check jika ada RPC
+        sol_bal = 0.0
+        if HAS_ENGINE_MODULES and wallet_data.get("public_key"):
+            try:
+                sol_bal = await wallet_manager.get_sol_balance(wallet_data["public_key"])
+            except Exception:
+                sol_bal = 0.0
+        wallet_data["sol_balance"] = sol_bal
+        
+        return web.json_response({
+            "success": True,
+            "wallet": wallet_data,
+            "demo_wallet": {
+                "name": "ScreenerNantiAja Demo Bot",
+                "label": "Demo / Sandbox Wallet (Paper Trading)",
+                "initial_capital_sol": demo_stats.get("initial_capital_sol", 0.1),
+                "balance_sol": demo_stats.get("current_balance_sol", 0.1),
+                "realized_sol": demo_stats.get("total_realized_sol", 0.0),
+                "total_trades": demo_stats.get("total_trades", 0),
+                "win_trades": demo_stats.get("win_trades", 0),
+                "status": "AKTIF (Paper Autonomous Engine)"
+            }
+        })
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
@@ -651,20 +691,45 @@ async def api_update_wallet_settings(request):
         buy_sol = min(max(float(body.get("default_buy_sol", 0.1) or 0.1), 0.001), 5.0)
         slippage = min(max(float(body.get("slippage_pct", 15.0) or 15.0), 0.1), 50.0)
         auto_buy = 1 if body.get("auto_buy_enabled") else 0
+        
+        # Pengaturan adaptif sizing
+        auto_buy_mode = "usd" if str(body.get("auto_buy_mode", "sol")).lower() == "usd" else "sol"
+        min_sol = min(max(float(body.get("auto_buy_min_sol", 0.05) or 0.05), 0.001), 5.0)
+        max_sol = min(max(float(body.get("auto_buy_max_sol", 0.20) or 0.20), min_sol), 10.0)
+        min_usd = min(max(float(body.get("auto_buy_min_usd", 2.0) or 2.0), 0.1), 100.0)
+        max_usd = min(max(float(body.get("auto_buy_max_usd", 5.0) or 5.0), min_usd), 500.0)
+        active_wallet_type = "real" if str(body.get("active_wallet_type", "demo")).lower() == "real" else "demo"
     except (TypeError, ValueError):
         return web.json_response({"success": False, "error": "Nilai setting tidak valid"}, status=400)
 
+    try:
         conn = get_db_connection(False)
         c = conn.cursor()
         c.execute("""
             UPDATE user_trading_wallets
-            SET default_buy_sol=?, slippage_pct=?, auto_buy_enabled=?
+            SET default_buy_sol=?, slippage_pct=?, auto_buy_enabled=?,
+                auto_buy_mode=?, auto_buy_min_sol=?, auto_buy_max_sol=?,
+                auto_buy_min_usd=?, auto_buy_max_usd=?, active_wallet_type=?
             WHERE user_id=?
-        """, (buy_sol, slippage, auto_buy, user_id))
+        """, (buy_sol, slippage, auto_buy, auto_buy_mode, min_sol, max_sol, min_usd, max_usd, active_wallet_type, user_id))
         conn.commit()
         conn.close()
 
-        return web.json_response({"success": True, "message": "Pengaturan wallet tersimpan"})
+        # Update cache in wallet_manager if loaded
+        if HAS_ENGINE_MODULES and hasattr(wallet_manager, "_wallet_cache"):
+            w_cache = wallet_manager._wallet_cache.get(str(user_id))
+            if w_cache:
+                w_cache["default_buy_sol"] = buy_sol
+                w_cache["slippage_pct"] = slippage
+                w_cache["auto_buy_enabled"] = bool(auto_buy)
+                w_cache["auto_buy_mode"] = auto_buy_mode
+                w_cache["auto_buy_min_sol"] = min_sol
+                w_cache["auto_buy_max_sol"] = max_sol
+                w_cache["auto_buy_min_usd"] = min_usd
+                w_cache["auto_buy_max_usd"] = max_usd
+                w_cache["active_wallet_type"] = active_wallet_type
+
+        return web.json_response({"success": True, "message": "Pengaturan wallet & adaptif autobuy tersimpan"})
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 

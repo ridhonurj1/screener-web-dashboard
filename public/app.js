@@ -1579,6 +1579,42 @@ function renderPortfolio(force) {
 /* ---------------- Wallet ---------------- */
 
 let walletLoaded = false;
+let currentAutoBuyMode = 'usd';
+
+function switchAutoBuyMode(mode) {
+  currentAutoBuyMode = mode === 'sol' ? 'sol' : 'usd';
+  const isUsd = currentAutoBuyMode === 'usd';
+  document.getElementById('btnModeUsd')?.classList.toggle('active', isUsd);
+  document.getElementById('btnModeSol')?.classList.toggle('active', !isUsd);
+  document.getElementById('sectionRangeUsd')?.classList.toggle('hidden', !isUsd);
+  document.getElementById('sectionRangeSol')?.classList.toggle('hidden', isUsd);
+  updateAdaptiveSimLabels();
+}
+
+function updateAdaptiveSimLabels() {
+  const isUsd = currentAutoBuyMode === 'usd';
+  if (isUsd) {
+    const minU = parseFloat(document.getElementById('settingMinUsd')?.value) || 2.0;
+    const maxU = parseFloat(document.getElementById('settingMaxUsd')?.value) || 5.0;
+    const midU = (minU + (maxU - minU) * 0.55).toFixed(2);
+    const elMin = document.getElementById('simMinLabel');
+    const elMid = document.getElementById('simMidLabel');
+    const elMax = document.getElementById('simMaxLabel');
+    if (elMin) elMin.textContent = `$${minU.toFixed(2)}`;
+    if (elMid) elMid.textContent = `$${midU}`;
+    if (elMax) elMax.textContent = `$${maxU.toFixed(2)}`;
+  } else {
+    const minS = parseFloat(document.getElementById('settingMinSol')?.value) || 0.05;
+    const maxS = parseFloat(document.getElementById('settingMaxSol')?.value) || 0.20;
+    const midS = (minS + (maxS - minS) * 0.55).toFixed(3);
+    const elMin = document.getElementById('simMinLabel');
+    const elMid = document.getElementById('simMidLabel');
+    const elMax = document.getElementById('simMaxLabel');
+    if (elMin) elMin.textContent = `${minS} SOL`;
+    if (elMid) elMid.textContent = `${midS} SOL`;
+    if (elMax) elMax.textContent = `${maxS} SOL`;
+  }
+}
 
 async function loadWalletData() {
   try {
@@ -1587,11 +1623,55 @@ async function loadWalletData() {
     if (data.success && data.wallet) {
       walletLoaded = true;
       const w = data.wallet;
+      const demo = data.demo_wallet;
+      
+      // Update Demo Wallet card
+      if (demo) {
+        const dSol = document.getElementById('drawerDemoSol');
+        const dMod = document.getElementById('drawerDemoModal');
+        const dPnl = document.getElementById('drawerDemoPnl');
+        const dWin = document.getElementById('drawerDemoWin');
+        if (dSol) dSol.textContent = `${fmtSol(demo.balance_sol ?? 0.1)} SOL`;
+        if (dMod) dMod.textContent = `${fmtSol(demo.initial_capital_sol ?? 0.1)} SOL`;
+        if (dPnl) dPnl.textContent = `${(demo.realized_sol ?? 0) >= 0 ? '+' : ''}${fmtSol(demo.realized_sol ?? 0, 4)} SOL`;
+        if (dWin) {
+          const wr = demo.total_trades > 0 ? ((demo.win_trades / demo.total_trades) * 100).toFixed(1) : '0.0';
+          dWin.textContent = `${wr}% (${demo.total_trades} tr)`;
+        }
+      }
+
+      // Update Real Wallet
       document.getElementById('drawerWalletPubkey').textContent = w.public_key;
       document.getElementById('headerWalletPreview').textContent = `${w.public_key.slice(0, 4)}…${w.public_key.slice(-4)}`;
       document.getElementById('drawerWalletSol').textContent = `${fmtSol(w.sol_balance ?? 0)} SOL`;
-      document.getElementById('settingBuySol').value = w.default_buy_sol ?? 0.1;
-      document.getElementById('settingSlippage').value = w.slippage_pct ?? 15;
+      
+      // Adaptive fields
+      if (w.auto_buy_min_usd !== undefined && document.getElementById('settingMinUsd')) {
+        document.getElementById('settingMinUsd').value = w.auto_buy_min_usd;
+      }
+      if (w.auto_buy_max_usd !== undefined && document.getElementById('settingMaxUsd')) {
+        document.getElementById('settingMaxUsd').value = w.auto_buy_max_usd;
+      }
+      if (w.auto_buy_min_sol !== undefined && document.getElementById('settingMinSol')) {
+        document.getElementById('settingMinSol').value = w.auto_buy_min_sol;
+      }
+      if (w.auto_buy_max_sol !== undefined && document.getElementById('settingMaxSol')) {
+        document.getElementById('settingMaxSol').value = w.auto_buy_max_sol;
+      }
+      if (w.slippage_pct !== undefined && document.getElementById('settingSlippage')) {
+        document.getElementById('settingSlippage').value = w.slippage_pct;
+      }
+      if (w.active_wallet_type && document.getElementById('settingWalletType')) {
+        document.getElementById('settingWalletType').value = w.active_wallet_type;
+        const b = document.getElementById('walletTypeBadge');
+        if (b) {
+          b.textContent = w.active_wallet_type === 'real' ? 'ACTIVE ON-CHAIN' : 'STANDBY';
+          b.style.color = w.active_wallet_type === 'real' ? 'var(--green)' : 'var(--text-3)';
+        }
+      }
+
+      switchAutoBuyMode(w.auto_buy_mode || 'usd');
+
       walletAutoBuy = !!w.auto_buy_enabled;
       document.getElementById('autoBuySwitch').checked = walletAutoBuy;
       updateAutoChip();
@@ -1617,14 +1697,33 @@ function updateAutoChip() {
   document.getElementById('autoBuyChipState').textContent = walletAutoBuy ? 'ON' : 'OFF';
 }
 
-document.getElementById('autoBuySwitch').addEventListener('change', syncAutoBuyWarning);
+function initWalletEvents() {
+  ['settingMinUsd', 'settingMaxUsd', 'settingMinSol', 'settingMaxSol'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateAdaptiveSimLabels);
+  });
+}
+window.addEventListener('DOMContentLoaded', initWalletEvents);
+if (document.readyState !== 'loading') initWalletEvents();
 
 async function saveWalletSettings() {
+  const btn = document.getElementById('btnRunWalletSettings');
+  const origHTML = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Menyimpan...';
+  }
+
   const payload = {
-    default_buy_sol: parseFloat(document.getElementById('settingBuySol').value) || 0.1,
-    slippage_pct: parseFloat(document.getElementById('settingSlippage').value) || 15,
-    auto_buy_enabled: document.getElementById('autoBuySwitch').checked
+    auto_buy_mode: currentAutoBuyMode,
+    auto_buy_min_usd: parseFloat(document.getElementById('settingMinUsd')?.value) || 2.0,
+    auto_buy_max_usd: parseFloat(document.getElementById('settingMaxUsd')?.value) || 5.0,
+    auto_buy_min_sol: parseFloat(document.getElementById('settingMinSol')?.value) || 0.05,
+    auto_buy_max_sol: parseFloat(document.getElementById('settingMaxSol')?.value) || 0.20,
+    slippage_pct: parseFloat(document.getElementById('settingSlippage')?.value) || 15.0,
+    auto_buy_enabled: document.getElementById('autoBuySwitch').checked,
+    active_wallet_type: document.getElementById('settingWalletType')?.value || 'demo'
   };
+
   try {
     const res = await fetch('/api/wallet/settings', {
       method: 'POST',
@@ -1636,13 +1735,24 @@ async function saveWalletSettings() {
       walletAutoBuy = payload.auto_buy_enabled;
       updateAutoChip();
       syncAutoBuyWarning();
-      toast('Pengaturan & automasi tersimpan!');
-      if (payload.auto_buy_enabled) toast('Auto-buy RIIL aktif — engine akan eksekusi saldo asli.', 'error');
+      toast('✅ Pengaturan adaptif autobuy berhasil diterapkan (RUN OK)!');
+      if (payload.auto_buy_enabled) {
+        if (payload.active_wallet_type === 'real') {
+          toast('⚠️ Auto-buy ON-CHAIN RIIL aktif dengan sizing adaptif!', 'error');
+        } else {
+          toast('⚡ Auto-buy DEMO BOT aktif dengan sizing adaptif!');
+        }
+      }
     } else {
       toast('Gagal: ' + (data.error || 'unknown'), 'error');
     }
   } catch (e) {
     toast('Error: ' + e.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
   }
 }
 

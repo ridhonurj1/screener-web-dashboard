@@ -510,6 +510,46 @@
 
       <!-- WALLET -->
       <div id="drawerTabWallet" class="drawer-pane hidden">
+        <!-- DEMO BOT WALLET (SANDBOX) -->
+        <div class="wallet-card" style="border-color:rgba(40,200,64,0.3);background:linear-gradient(180deg, rgba(40,200,64,0.04) 0%, var(--bg-1) 100%)">
+          <div class="wallet-id-row">
+            <div style="display:flex;align-items:center;gap:11px">
+              <div style="width:40px;height:40px;border-radius:12px;background:var(--green-dim);border:1px solid var(--green-border);display:grid;place-items:center;color:var(--green)">
+                <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:13px;font-weight:800">Demo Bot Sandbox Wallet</span>
+                  <span class="chip" style="background:var(--green-dim);color:var(--green);border-color:var(--green-border);font-size:9.5px">DEFAULT RUNNER</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-3)">Akun simulasi quant autonomous (35+ trade aktif)</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <span class="field-label" style="margin:0 0 2px">Saldo Demo</span>
+              <span id="drawerDemoSol" class="mono" style="font-size:15px;font-weight:800;color:var(--green)">0.2813 SOL</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-1);font-family:var(--font-mono);font-size:11px">
+            <div>
+              <div style="color:var(--text-4);font-size:9.5px">MODAL AWAL</div>
+              <div id="drawerDemoModal" style="font-weight:700;color:var(--text-2)">0.1000 SOL</div>
+            </div>
+            <div>
+              <div style="color:var(--text-4);font-size:9.5px">REALIZED PNL</div>
+              <div id="drawerDemoPnl" style="font-weight:700;color:var(--green)">+0.2013 SOL</div>
+            </div>
+            <div>
+              <div style="color:var(--text-4);font-size:9.5px">WIN RATE</div>
+              <div id="drawerDemoWin" style="font-weight:700;color:var(--cyan)">37.1% (35 tr)</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:10.5px;color:var(--text-4);line-height:1.4">
+            💡 Seluruh angka PnL, grafik performa, dan riwayat yang tampil saat ini terisolasi murni di dompet demo ini.
+          </div>
+        </div>
+
+        <!-- REAL ON-CHAIN WALLET -->
         <div class="wallet-card">
           <div class="wallet-id-row">
             <div style="display:flex;align-items:center;gap:11px">
@@ -517,13 +557,16 @@
                 <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
               </div>
               <div>
-                <div style="font-size:13px;font-weight:800">Solana Trading Wallet</div>
-                <div style="font-size:11px;color:var(--text-3)">Wallet engine aktif on-chain</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:13px;font-weight:800">Real Solana Wallet</span>
+                  <span class="chip" id="walletTypeBadge" style="font-size:9.5px">STANDBY</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-3)">Wallet engine asli di blockchain Solana</div>
               </div>
             </div>
             <div style="text-align:right">
-              <span class="field-label" style="margin:0 0 2px">Saldo SOL</span>
-              <span id="drawerWalletSol" class="mono" style="font-size:15px;font-weight:800;color:var(--green)">—</span>
+              <span class="field-label" style="margin:0 0 2px">Saldo Riil</span>
+              <span id="drawerWalletSol" class="mono" style="font-size:15px;font-weight:800;color:var(--text-1)">—</span>
             </div>
           </div>
 
@@ -588,14 +631,62 @@
             </span>
           </label>
 
-          <div class="settings-grid">
-            <div>
-              <label class="field-label" for="settingBuySol">Default Buy (SOL)</label>
-              <input type="number" step="0.01" min="0" id="settingBuySol" class="input">
+          <!-- SIZING ADAPTIF CONTROLS -->
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-1)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <span style="font-size:12px;font-weight:700;display:block">Sizing Pembelian Adaptif (Ponyin Engine)</span>
+                <span style="font-size:10.5px;color:var(--text-3)">Bot menghitung porsi beli secara proporsional sesuai skor, likuiditas, &amp; Smart Money.</span>
+              </div>
+              <div class="segmented" id="autoBuyModeSegment" role="tablist" style="padding:2px">
+                <button type="button" class="seg-btn active" id="btnModeUsd" onclick="switchAutoBuyMode('usd')">USD ($)</button>
+                <button type="button" class="seg-btn" id="btnModeSol" onclick="switchAutoBuyMode('sol')">SOL</button>
+              </div>
             </div>
+
+            <!-- Rentang USD -->
+            <div id="sectionRangeUsd" class="settings-grid">
+              <div>
+                <label class="field-label" for="settingMinUsd">Min Buy (USD $)</label>
+                <input type="number" step="0.5" min="0.5" max="100" id="settingMinUsd" class="input" value="2.0">
+              </div>
+              <div>
+                <label class="field-label" for="settingMaxUsd">Max Buy (USD $)</label>
+                <input type="number" step="0.5" min="1.0" max="500" id="settingMaxUsd" class="input" value="5.0">
+              </div>
+            </div>
+
+            <!-- Rentang SOL -->
+            <div id="sectionRangeSol" class="settings-grid hidden">
+              <div>
+                <label class="field-label" for="settingMinSol">Min Buy (SOL)</label>
+                <input type="number" step="0.01" min="0.01" max="5" id="settingMinSol" class="input" value="0.05">
+              </div>
+              <div>
+                <label class="field-label" for="settingMaxSol">Max Buy (SOL)</label>
+                <input type="number" step="0.01" min="0.01" max="10" id="settingMaxSol" class="input" value="0.20">
+              </div>
+            </div>
+
+            <div style="margin-top:7px;padding:8px 10px;background:var(--bg-2);border-radius:var(--r-sm);border:1px solid var(--border-1);font-family:var(--font-mono);font-size:10.5px;color:var(--text-3);line-height:1.4">
+              🎯 <b>Simulasi Eksekusi Adaptif:</b><br>
+              • Sinyal Standard (Skor 80, 1 SM): Beli batas bawah (<span id="simMinLabel">$2.00</span>)<br>
+              • Sinyal High-Conviction (Skor 92, Liq 30%+, 3 SM): Beli dinamis ~<span id="simMidLabel" style="color:var(--lime);font-weight:700">$3.65</span><br>
+              • Sinyal Runner Mutlak (Skor 98, 6+ SM): Beli batas atas (<span id="simMaxLabel">$5.00</span>)
+            </div>
+          </div>
+
+          <div class="settings-grid" style="margin-top:10px">
             <div>
               <label class="field-label" for="settingSlippage">Slippage (%)</label>
               <input type="number" step="1" min="0" max="100" id="settingSlippage" class="input">
+            </div>
+            <div>
+              <label class="field-label" for="settingWalletType">Target Eksekusi Engine</label>
+              <select id="settingWalletType" class="input" style="height:36px;background:var(--bg-2)">
+                <option value="demo">Demo / Sandbox Bot (Aman)</option>
+                <option value="real">Real Wallet On-Chain (Uang Asli)</option>
+              </select>
             </div>
           </div>
 
@@ -604,10 +695,11 @@
             <span><b>Mode riil aktif.</b> Engine akan membeli token secara otomatis dengan saldo asli di wallet kamu. Pastikan parameter sudah sesuai.</span>
           </div>
 
-          <div style="display:flex;justify-content:flex-end">
-            <button class="btn btn-solid" onclick="saveWalletSettings()">
-              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
-              Simpan Pengaturan
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <div style="font-size:11px;color:var(--text-4)">Tekan <b>RUN / SIMPAN</b> untuk menerapkan perubahan.</div>
+            <button class="btn btn-solid" id="btnRunWalletSettings" onclick="saveWalletSettings()" style="background:var(--lime);color:#000;font-weight:800;padding:8px 16px">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              RUN / SIMPAN
             </button>
           </div>
         </div>
@@ -744,6 +836,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906o"></script>
+  <script src="/app.js?v=20260906p"></script>
 </body>
 </html>
