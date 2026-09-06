@@ -2318,6 +2318,7 @@ async function loadPing() {
     const dbi = data.db || {};
     set('dbStatus', dbi.status || '—');
     set('dbSignals', dbi.signals ?? '—');
+    set('dbSM', dbi.smart_money ?? '—');
     set('dbPositions', dbi.open_positions ?? '—');
 
     // Kotak besar: INFRASTRUKTUR EKSEKUSI
