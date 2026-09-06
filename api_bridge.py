@@ -377,7 +377,7 @@ async def api_ping(request):
         c.execute("""
             SELECT timestamp, rpc_slot, rpc_latency_ms, jupiter_latency_ms,
                    dexscreener_latency_ms, rugcheck_latency_ms, jito_latency_ms,
-                   active_positions, total_signals
+                   active_positions, total_signals, details_json
             FROM system_telemetry_history ORDER BY id DESC LIMIT 1
         """)
         tel = c.fetchone()
@@ -412,6 +412,16 @@ async def api_ping(request):
                 snap = {}
         gs = snap.get("stats") or {}
         cluster = snap.get("cluster") or []
+
+        details = {}
+        try:
+            details = json.loads(tel["details_json"] or "{}")
+            if not isinstance(details, dict):
+                details = {}
+        except Exception:
+            details = {}
+        hardware = details.get("hardware") or {}
+        dbinfo = details.get("db") or {}
 
         _req = int(gs.get("requests", 0) or 0)
         _ok = int(gs.get("hits_200", 0) or 0)
@@ -476,6 +486,8 @@ async def api_ping(request):
             "db_read_ms": round(db_read_ms, 2),
             "snapshot_utc": _now_utc,
             "dex_ok": bool(snap.get("dex_ok", True)),
+            "hardware": hardware,
+            "db": dbinfo,
             "telemetry": {
                 "timestamp": str(tel["timestamp"]),
                 "rpc_slot": r_slot,
