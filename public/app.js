@@ -2307,6 +2307,19 @@ async function loadPing() {
     set('hpReady', `${ready}`);
     set('hpReadySub', `dari ${slots.length || 15} slot`);
 
+    // Server & Hardware (mirror psutil dari engine)
+    const hw = data.hardware || {};
+    set('hwBotRam', `${hw.bot_ram_mb ?? '—'} MB`);
+    set('hwBotCpu', `${hw.bot_cpu_pct ?? '—'}%`);
+    set('hwHostRam', `${hw.host_ram_used_gb ?? '—'} / ${hw.host_ram_total_gb ?? '—'} GB`);
+    set('hwHostRamSub', `terpakai ${hw.host_ram_pct ?? '—'}%`);
+    set('hwHostCpu', `${hw.host_cpu_pct ?? '—'}%`);
+    // Database & integrity (dari snapshot telemetri engine)
+    const dbi = data.db || {};
+    set('dbStatus', dbi.status || '—');
+    set('dbSignals', dbi.signals ?? '—');
+    set('dbPositions', dbi.open_positions ?? '—');
+
     // Kotak besar: INFRASTRUKTUR EKSEKUSI
     const infra = document.getElementById('hpInfra');
     if (infra) {

@@ -358,6 +358,25 @@
     </div>
 
     <section class="page-card" style="margin-bottom:14px">
+      <div class="hp-title">🖥️ SERVER &amp; HARDWARE STATUS</div>
+      <div class="hp-grid">
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot RAM</div><div class="hp-api-lat" id="hwBotRam">—</div><div class="hp-api-sub">proses bot_server</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">ENGINE</span></div><div class="hp-api-name">Bot CPU</div><div class="hp-api-lat" id="hwBotCpu">—</div><div class="hp-api-sub">proses bot_server</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host RAM</div><div class="hp-api-lat" id="hwHostRam">—</div><div class="hp-api-sub" id="hwHostRamSub">—</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">HOST</span></div><div class="hp-api-name">Host CPU</div><div class="hp-api-lat" id="hwHostCpu">—</div><div class="hp-api-sub">total usage</div></div>
+      </div>
+    </section>
+
+    <section class="page-card" style="margin-bottom:14px">
+      <div class="hp-title">🗄️ DATABASE &amp; DATA INTEGRITY</div>
+      <div class="hp-grid">
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">SQLITE</span></div><div class="hp-api-name">Status Database</div><div class="hp-api-lat" id="dbStatus" style="font-size:13px">—</div><div class="hp-api-sub">WAL Mode Active</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DATA</span></div><div class="hp-api-name">Total Sinyal di DB</div><div class="hp-api-lat" id="dbSignals">—</div><div class="hp-s">baris signals</div></div>
+        <div class="hp-api"><div class="hp-api-head"><span class="hp-dot dot-ok"></span><span class="hp-dot-lbl dot-ok">DEMO</span></div><div class="hp-api-name">Posisi Demo Aktif</div><div class="hp-api-lat" id="dbPositions">—</div><div class="hp-s">posisi terbuka</div></div>
+      </div>
+    </section>
+
+    <section class="page-card" style="margin-bottom:14px">
       <div class="hp-title">🌐 INFRASTRUKTUR EKSEKUSI</div>
       <div class="hp-grid" id="hpInfra"></div>
     </section>
