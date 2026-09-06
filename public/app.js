@@ -161,6 +161,27 @@ function authQuery() {
   };
 })();
 
+/* ---------------- Zona waktu tampilan (Region Time) ---------------- */
+// 'auto' = ikuti perangkat; selain itu offset jam terhadap UTC (mis. '7' = WIB).
+let TZ_MODE = localStorage.getItem('tzMode') || 'auto';
+function tzOffsetH() { return TZ_MODE === 'auto' ? null : (parseFloat(TZ_MODE) || 0); }
+// Geser timestamp agar getter lokal menampilkan jam zona target
+function tzShift(ms) {
+  const off = tzOffsetH();
+  if (off === null) return ms;
+  const target = off * 3600000;
+  const browser = -new Date(ms).getTimezoneOffset() * 60000;
+  return ms + (target - browser);
+}
+function tzLabel() {
+  if (TZ_MODE === 'auto') {
+    const off = -new Date().getTimezoneOffset() / 60;
+    return `Auto (UTC${off >= 0 ? '+' : ''}${off})`;
+  }
+  const off = parseFloat(TZ_MODE) || 0;
+  return `UTC${off >= 0 ? '+' : ''}${off}`;
+}
+
 const AVATAR_TONES = ['tone-lime', 'tone-cyan', 'tone-blue', 'tone-violet', 'tone-amber'];
 function avatarTone(ca) {
   let h = 0;
@@ -1295,7 +1316,7 @@ function tickDecimals(step) {
 }
 
 function fmtAxisTime(ts) {
-  const d = new Date(ts);
+  const d = new Date(tzShift(ts));
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   const now = new Date();
@@ -2234,7 +2255,14 @@ async function loadPing() {
     window.__hpTel = tel;
     window.__hpDexOk = data.dex_ok;
     const age = data.age_seconds ?? null;
-    if (meta) meta.textContent = `Mirror DB: ${data.state_updated || '—'} (usia ${age ?? '—'}s) · Telemetri: ${tel.timestamp || '—'} · 0 kuota API`;
+    if (meta) {
+      let mirrorTxt = data.state_updated || '—';
+      try {
+        const ms = Date.parse(String(data.state_updated).replace(' ', 'T') + 'Z');
+        if (isFinite(ms)) mirrorTxt = `${fmtAxisTime(ms)} (${tzLabel()})`;
+      } catch (err) { /* noop */ }
+      meta.textContent = `Mirror DB: ${mirrorTxt} (usia ${age ?? '—'}s) · Telemetri: ${tel.timestamp || '—'} UTC · 0 kuota API`;
+    }
 
     const st = data.stats || {};
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -2294,6 +2322,30 @@ document.getElementById('pingRefresh')?.addEventListener('click', loadPing);
 // Health Ping nyaris realtime: mirror DB diperbarui tiap siklus tracker (2s),
 // halaman ikut poll tiap 2 detik selama halamannya terbuka.
 setInterval(() => { if (currentPage === 'healthping') loadPing(); }, 2000);
+
+// Zona waktu: ganti -> render ulang halaman aktif (kurva, label, ping)
+const _tzSel = document.getElementById('tzSel');
+if (_tzSel) {
+  _tzSel.value = TZ_MODE;
+  if (_tzSel.value !== TZ_MODE) _tzSel.value = 'auto';
+  _tzSel.addEventListener('change', e => {
+    TZ_MODE = e.target.value;
+    try { localStorage.setItem('tzMode', TZ_MODE); } catch (err) { /* noop */ }
+    setCurrentPage(window.location.pathname);
+  });
+}
+
+// Zona waktu: ganti -> render ulang halaman aktif (kurva, label, ping)
+const _tzSel = document.getElementById('tzSel');
+if (_tzSel) {
+  _tzSel.value = TZ_MODE;
+  if (_tzSel.value !== TZ_MODE) _tzSel.value = 'auto';
+  _tzSel.addEventListener('change', e => {
+    TZ_MODE = e.target.value;
+    try { localStorage.setItem('tzMode', TZ_MODE); } catch (err) { /* noop */ }
+    setCurrentPage(window.location.pathname);
+  });
+}
 
 /* ---------------- Boot ---------------- */
 

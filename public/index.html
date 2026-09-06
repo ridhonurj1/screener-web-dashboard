@@ -336,7 +336,17 @@
         <h1 class="page-title">Health Ping</h1>
         <div style="font-size:11px;color:var(--text-3)" id="pingMeta">Memuat mirror state dari engine…</div>
       </div>
-      <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <select id="tzSel" title="Zona waktu tampilan" style="background:var(--bg-1);color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:4px 6px;font-size:11px;">
+          <option value="auto">Zona: Auto (Perangkat)</option>
+          <option value="7">WIB (UTC+7)</option>
+          <option value="8">UTC+8</option>
+          <option value="9">UTC+9</option>
+          <option value="0">UTC</option>
+          <option value="-5">UTC-5</option>
+        </select>
+        <button class="btn" id="pingRefresh" style="padding:6px 14px;font-size:11px;">↻ Refresh</button>
+      </div>
     </div>
 
     <div class="hp-cards" style="margin-bottom:14px">
@@ -713,6 +723,6 @@
   <!-- ==================== TOASTS ==================== -->
   <div id="toastZone" class="toast-zone" aria-live="polite"></div>
 
-  <script src="/app.js?v=20260906i"></script>
+  <script src="/app.js?v=20260906j"></script>
 </body>
 </html>
